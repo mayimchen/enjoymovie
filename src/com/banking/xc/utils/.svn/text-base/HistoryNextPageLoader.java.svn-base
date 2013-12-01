@@ -1,0 +1,496 @@
+package com.jingdong.app.mall.utils;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import android.app.ProgressDialog;
+import com.jingdong.app.mall.utils.Log;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.AbsListView;
+import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.AbsListView.OnScrollListener;
+
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.utils.HttpGroup.HttpError;
+import com.jingdong.app.mall.utils.HttpGroup.HttpResponse;
+
+public abstract class HistoryNextPageLoader implements HttpGroup.OnAllListener {
+
+	private MyActivity myActivity;
+	private AbsListView listView;
+	private MySimpleAdapter adapter;
+
+	private View loadingView;
+
+	private ArrayList<Object> showItemList = new ArrayList<Object>();// 直接引用当前显示的数据
+	private boolean loading = false;// 标志位，保证滚动到屏幕底部的时候，不会多次触发加载
+	private ArrayList<?> nextItemList = null;// 用于预存下一页的数据
+	private boolean loadedShow = false;// 标志位，如果第二页还在下载的过程中就滚动到页尾部，可以通过该标志位申请下载后马上显示。
+	private boolean loadedLastPage = false;
+
+	protected HttpGroup httpGroup;
+	protected JSONObject params = new JSONObject();
+	protected String pageNumParamKey = "page";
+	protected String pageSizeParamKey = "pagesize";
+	protected Integer pageNum = 1;
+	protected Integer pageSize = 10;
+	// private ProgressDialog dialog;
+	private String functionId;
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-26 上午10:31:40
+	 * 
+	 *         Name:
+	 * 
+	 *         Description:
+	 * 
+	 * @param myActivity
+	 *            因为这里建立的连接组或连接都要关联到某个myActivity去管理，所以要把myActivity传进来。
+	 * @param listView
+	 * @param loadingView
+	 *            显示加载中的图标
+	 * @param functionId
+	 *            跟服务器连接的functionId
+	 * 
+	 */
+	public HistoryNextPageLoader(MyActivity myActivity, AbsListView listView,
+			View loadingView, String functionId) {
+		this.myActivity = myActivity;
+		httpGroup = this.myActivity.getHttpGroupaAsynPool();
+		this.listView = listView;
+		this.loadingView = loadingView;
+		this.functionId = functionId;
+	}
+
+	public HistoryNextPageLoader(MyActivity myActivity, AbsListView listView,
+			View loadingView, String functionId, JSONObject params) {
+		this(myActivity, listView, loadingView, functionId);
+		this.params = params;
+	}
+
+	public void showPageOne() {
+		if (showItemList.size() < 1) {
+			applyLoadedShow();
+			tryShowNextPage();
+			// dialog = new ProgressDialog(this.myActivity);
+			// dialog.show();
+		}
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-26 下午02:26:37
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 是否加载过最后一页
+	 * 
+	 * @return
+	 * 
+	 */
+	private boolean isLoadedLastPage() {
+		// TODO Auto-generated method stub
+		return loadedLastPage;
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-25 下午04:27:26
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 当需要下载下一页数据时，加锁。目前没有正在下载的，那么返回true，可以加锁，否则返回false。
+	 * 
+	 * @return
+	 * 
+	 */
+	private synchronized boolean loadingLock() {
+		if (!loading) {// 如果没有加载中就改为加载中
+			loading = true;
+			return loading;
+		}
+		return false;
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-25 下午04:27:29
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 下载完毕时，解锁
+	 * 
+	 * 
+	 */
+	private synchronized void loadingUnLock() {
+		loading = false;
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-25 下午04:06:08
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 下载后判断是否需要马上显示
+	 * 
+	 * @return
+	 * 
+	 */
+	private boolean loadedShow() {
+		if (loadedShow) {
+			loadedShow = false;
+			return true;
+		} else {
+			return false;
+		}
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-25 下午04:33:55
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 申请要求下载后马上显示
+	 * 
+	 * @return
+	 * 
+	 */
+	private void applyLoadedShow() {
+		loadedShow = true;
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-25 下午03:59:12
+	 * 
+	 *         Name:
+	 * 
+	 *         Description:
+	 *         根据网络返回的httpResponse内容转换为列表需要的beanList。如果转换过程发生异常，无法满足基本显示要求
+	 *         ，请返回空，此类会自动调用错误呈现。
+	 * 
+	 * @param httpResponse
+	 * @return
+	 * 
+	 */
+	protected abstract ArrayList<?> toList(HttpResponse httpResponse);
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-25 下午04:00:55
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 错误呈现逻辑
+	 * 
+	 * 
+	 */
+	protected abstract void showError();
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-25 下午04:06:12
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 创建自定义 adapter
+	 * 
+	 * @param context
+	 * @param itemList
+	 * @return
+	 * 
+	 */
+	protected abstract MySimpleAdapter createAdapter(MyActivity myActivity,
+			ArrayList<?> itemList);
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-25 上午10:03:06
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 显示下一页的逻辑。注意：应该在此方法前准备好数据；此方法应该执行在UI线程之外；此方法属于控制层
+	 * 
+	 * @param itemList
+	 * 
+	 */
+	private void showNextPage(ArrayList<?> itemList) {
+
+		showItemList.addAll(itemList);
+
+		if (showItemList.size() < 1 && listView instanceof ListView) {
+			final TextView textView = new TextView(myActivity);
+			textView.setGravity(Gravity.CENTER);
+			textView.setText(R.string.no_data);
+
+			myActivity.post(new Runnable() {
+				public void run() {
+					((ListView) listView).addHeaderView(textView);
+				}
+			});
+		}
+
+		if (itemList.size() < pageSize) {
+			// 最后一页
+			loadedLastPage = true;
+			listView.setOnScrollListener(null);
+		} else {
+			pageNum++;
+			loading();// 如果要显示这页就马上继续加载下一页
+		}
+
+		if (null == adapter) {
+			// 通过实现方法返回自定义的 adapter
+			adapter = createAdapter(myActivity, showItemList);
+
+			// XXX 下拉到低的时候触发，一般默认，预留扩展
+			listView.setOnScrollListener(new OnScrollLastListener() {
+				@Override
+				public void onScrollLast() {
+					if (!isLoadedLastPage()) {
+						tryShowNextPage();
+					}
+				}
+			});
+
+			myActivity.post(new Runnable() {
+				public void run() {
+					listView.setAdapter(adapter);
+					loadingUnLock();
+				}
+			});
+		} else {
+			myActivity.post(new Runnable() {
+				@Override
+				public void run() {
+					adapter.notifyDataSetChanged();
+					loadingUnLock();
+				}
+			});
+		}
+
+		if (isLoadedLastPage()) {
+			myActivity.post(new Runnable() {
+				@Override
+				public void run() {
+					if (listView instanceof ListView) {
+						if (Log.D) {
+							Log.d("tag",
+									"+++++++++++++++++++++[removeFooterView");
+						}
+						((ListView) listView).removeFooterView(loadingView);
+					}
+				}
+			});
+		}
+
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-26 上午08:41:41
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 非UI线程到网络取得数据后执行
+	 * 
+	 * 
+	 */
+	private void loading() {
+		try {
+			String wareIdList = "107225,104089,117884,110277,104087,165369,163395,261281,253234,311451";
+			params.put("wareId", wareIdList);
+		} catch (JSONException e) {
+			if (Log.V) {
+				Log.v("NextPageLoader", "JSONException -->> ", e);
+			}
+		}
+		// XXX 连接方式以后可能会需要修改。届时可将此类改名，抽取出父类，此处由子类实现。
+		httpGroup.add(functionId, params, this);
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-25 下午04:39:38
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 尝试显示下一页。每次滚动到最后一行会触发这个
+	 * 
+	 * 
+	 */
+	private void tryShowNextPage() {
+
+		if (null == nextItemList) {// 预加载数据为空才尝试加载
+			if (!loadingLock()) {// 如果不能加锁代表已经有在下载中
+				applyLoadedShow();// 申请要求下载后马上显示
+				return;
+			}
+
+			loading();
+		} else {// 预加载数据不为空，就直接显示
+			showNextPage(nextItemList);
+		}
+
+	}
+
+	/**
+	 * Copyright 2010 Jingdong Android Mobile Application
+	 * 
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-25 下午04:07:04
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 滚动到最后一行的监听器逻辑
+	 */
+	private abstract class OnScrollLastListener implements OnScrollListener {
+
+		private int firstVisibleItem;
+		private int visibleItemCount;
+		private int totalItemCount;
+
+		@Override
+		public void onScroll(AbsListView view, int firstVisibleItem,
+				int visibleItemCount, int totalItemCount) {
+			this.firstVisibleItem = firstVisibleItem;
+			this.visibleItemCount = visibleItemCount;
+			this.totalItemCount = totalItemCount;
+		}
+
+		@Override
+		public void onScrollStateChanged(AbsListView view, int scrollState) {
+			if (OnScrollListener.SCROLL_STATE_IDLE == scrollState) {// 停止滚动时
+				if (firstVisibleItem + visibleItemCount == totalItemCount) {
+					onScrollLast();
+				}
+			}
+		}
+
+		public abstract void onScrollLast();
+
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-26 上午09:59:14
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 可以通过此方法自定义跟服务器通讯的pageNum参数名
+	 * 
+	 * @param pageNumParamKey
+	 * 
+	 */
+	public void setPageNumParamKey(String pageNumParamKey) {
+		this.pageNumParamKey = pageNumParamKey;
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-26 上午09:59:16
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 可以通过此方法自定义跟服务器通讯的pageSize参数名
+	 * 
+	 * @param pageSizeParamKey
+	 * 
+	 */
+	public void setPageSizeParamKey(String pageSizeParamKey) {
+		this.pageSizeParamKey = pageSizeParamKey;
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-26 上午09:59:20
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 可以通过此方法自定义每页显示的行数
+	 * 
+	 * @param pageSize
+	 * 
+	 */
+	public void setPageSize(int pageSize) {
+		this.pageSize = pageSize;
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-26 上午11:39:58
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 获得的是引用，理论上可以在任何时候直接控制发出请求时的参数。
+	 *         注意：页码和每页行数在发送前会被覆盖，请不要依靠此处控制，通过其他方法可以自定义，由内部控制；
+	 *         最好在显示头一页之前就确定，开始使用后最好不要再去修改； 尽量不要被多线程控制和持有此对象，不实现多线程安全。
+	 * 
+	 * @return
+	 * 
+	 */
+	public JSONObject getParams() {
+		return params;
+	}
+
+	/*
+	 * 到网络取得数据后的逻辑
+	 */
+
+	@Override
+	public void onStart() {
+
+	}
+
+	@Override
+	public void onEnd(HttpResponse httpResponse) {
+		if (pageNum < 1) {// 控制加载进度条的显示，如果是第一页的话
+			// dialog.dismiss();
+		}
+		ArrayList<?> itemList = toList(httpResponse);
+		if (null == itemList) {// 返回空就呈现错误提示
+			showError();
+			return;
+		}
+		nextItemList = itemList;
+		if (loadedShow()) {// 是否马上显示
+			showNextPage(itemList);// 这个方法里面会自动又继续加载下一页
+		}
+	}
+
+	@Override
+	public void onProgress(int max, int progress) {
+
+	}
+
+	@Override
+	public void onError(HttpError error) {
+		showError();
+	}
+
+}

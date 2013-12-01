@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="50dp"
+    android:padding="2dp"
+    android:orientation="vertical" >
+    <ImageView
+        android:id="@+id/refpoints_iv"
+        android:layout_height="18dp"
+        android:layout_width="18dp"
+        android:src="@drawable/location_icon_group"
+        android:layout_marginLeft="5dp"
+        android:layout_marginTop="5dp"/>
+    <TextView 
+        android:id="@+id/refpoints_name"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:maxWidth="150dp"
+        android:ellipsize="end"
+        android:layout_toRightOf="@id/refpoints_iv"
+        android:layout_marginLeft="3dp"
+        android:layout_alignTop="@id/refpoints_iv"/>
+    <TextView 
+        android:id="@+id/refpoints_distance"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="5dp"
+        android:layout_alignTop="@id/refpoints_iv"/>
+    <TextView 
+        android:id="@+id/refpoints_desc"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:layout_marginTop="5dp"
+        android:layout_marginRight="5dp"
+        android:layout_below="@id/refpoints_iv"
+        />
+    
+</RelativeLayout>

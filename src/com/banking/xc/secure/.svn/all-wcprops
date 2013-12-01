@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 91
+/mobile/JdAppAndroid/!svn/ver/4008/branches/androidJd-main/src/com/jingdong/app/mall/secure
+END
+SecureNetwork.java
+K 25
+svn:wc:ra_dav:version-url
+V 110
+/mobile/JdAppAndroid/!svn/ver/3696/branches/androidJd-main/src/com/jingdong/app/mall/secure/SecureNetwork.java
+END
+SecureAPI.java
+K 25
+svn:wc:ra_dav:version-url
+V 106
+/mobile/JdAppAndroid/!svn/ver/4008/branches/androidJd-main/src/com/jingdong/app/mall/secure/SecureAPI.java
+END
+Base64.java
+K 25
+svn:wc:ra_dav:version-url
+V 103
+/mobile/JdAppAndroid/!svn/ver/3263/branches/androidJd-main/src/com/jingdong/app/mall/secure/Base64.java
+END
+RSAHelper.java
+K 25
+svn:wc:ra_dav:version-url
+V 106
+/mobile/JdAppAndroid/!svn/ver/3263/branches/androidJd-main/src/com/jingdong/app/mall/secure/RSAHelper.java
+END
+DesUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 104
+/mobile/JdAppAndroid/!svn/ver/3263/branches/androidJd-main/src/com/jingdong/app/mall/secure/DesUtil.java
+END

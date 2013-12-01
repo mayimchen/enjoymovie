@@ -1,0 +1,95 @@
+package com.jingdong.app.mall.utils;
+
+import java.util.Date;
+
+import android.app.AlarmManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+
+import com.jingdong.app.mall.config.Configuration;
+import com.jingdong.app.mall.constant.Constants;
+
+public class AlarmUtils {
+
+	public static final String PUSH_MSG_ACTION = "com.360buy.PUSH_MSG_TASK";
+
+	public static final long DEFAULT_DELAY = Configuration.getLongProperty(Configuration.DEFAULT_PUSH_MESSAGE_ALARM_DELAY); // 默认的间隔时间
+
+	public static final long UNKONW_DELAY = -1; // 位置的间隔时间
+
+	public static final long MAX_INTERVAL_TIME = 7200 * 1000l; // 最大间隔时间2个小时
+
+	public static final String TAG = "AlarmUtils";
+
+	/**
+	 * 闹钟是否需要唤醒硬件
+	 */
+	private static boolean needWakeUp = Boolean.parseBoolean(Configuration.getProperty(Configuration.ALARM_NEED_WAKE_UP, "true"));
+
+	/**
+	 * 创建一个获取推送消息的闹钟
+	 */
+	public synchronized static void alarmPushMsgTask(Context context, long delay) {
+		if (Log.D) {
+			Log.d(TAG, "alarmPushMsgTask delay: " + delay + " -- current:" + System.currentTimeMillis());
+		}
+
+		// if(delay == 600 * 1000) {
+		// delay = DEFAULT_DELAY;
+		// }
+
+		SharedPreferences preferences = CommonUtil.getJdSharedPreferences();
+
+		// 上次设置的间隔时间
+		long preDelay = preferences.getLong(Constants.SHARED_PREFERENCES_NEXT_PUSH_MSG_TASK_DELAY_TIME, DEFAULT_DELAY);
+
+		// 下次闹钟的启动时间
+		long nextAlarmTime = preferences.getLong(Constants.SHARED_PREFERENCES_NEXT_PUSH_MSG_TASK_TIME, 0);
+
+		// if (Configuration.getBooleanProperty(Configuration.TEST_MODE)) {
+		//		preDelay = 30 * 1000l;
+		// }
+
+		// 下次闹钟的启动时间大于当前的时间: 也就是当前后台有闹钟正在进行
+		long aboveTime = System.currentTimeMillis() - nextAlarmTime;
+		if (aboveTime < 0l && aboveTime > -MAX_INTERVAL_TIME) {
+			if (Log.D) {
+				Log.d(TAG, "isAlarmRunning at " + ((nextAlarmTime - System.currentTimeMillis())) + " mm delay to run");
+			}
+			return;
+		}
+
+		if (delay == UNKONW_DELAY) {
+			delay = preDelay;
+		}
+
+		if (Log.D) {
+			Log.d(TAG, "is really alarm -- > delay: " + delay + " -- current:" + System.currentTimeMillis());
+		}
+
+		// 重新启动闹钟的时间
+		nextAlarmTime = System.currentTimeMillis() + delay;
+
+		Editor editor = preferences.edit();
+		editor.putLong(Constants.SHARED_PREFERENCES_NEXT_PUSH_MSG_TASK_TIME, nextAlarmTime);
+		editor.commit();
+
+		AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+		Intent intent = new Intent(PUSH_MSG_ACTION);
+		intent.putExtra("delay", delay);
+		PendingIntent sender = PendingIntent.getBroadcast(context.getApplicationContext(), 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+		if (needWakeUp) {
+			am.set(AlarmManager.RTC_WAKEUP, nextAlarmTime, sender);
+		} else {
+			am.set(AlarmManager.RTC, nextAlarmTime, sender);
+		}
+
+		if (Log.D) {
+			Log.d(TAG, "alarm is sender complete on " + FormatUtils.formatDate(new Date()));
+		}
+	}
+
+}

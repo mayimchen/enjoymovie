@@ -1,0 +1,96 @@
+package com.banking.xc.utils;
+
+import java.io.File;
+import java.io.InputStream;
+
+import skytv_com.banking.enjoymovie.MyApplication;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.BitmapFactory.Options;
+import android.graphics.drawable.BitmapDrawable;
+
+import com.banking.xc.utils.ImageUtil.InputWay;
+
+public class AssetsUtils {
+
+	private static final String TAG = "AssetsCacheUtils";
+
+	/**
+	 * 从assets目录下读取缓存图片，例如：可读取/assets/jdcache/000343742987434c8f20cfafb007583a.image
+	 * 
+	 * @param name
+	 *            缓存图片名称
+	 * @param width
+	 *            读取图片的宽度
+	 * @param height
+	 *            读取图片的高度
+	 * @return
+	 */
+	public static BitmapDrawable readImage(String name, int width, int height) {
+		name = name + ".image";
+		Bitmap bitmap = null;
+		try {
+			if (Log.D) {
+				Log.d(TAG, " readImage() -->> name" + name + " width:" + width + " height:" + height);
+			}
+			InputStream inputStream = MyApplication.getInstance().getResources().getAssets().open("" + File.separator + name);
+			if (null != inputStream) {
+				byte[] inBytes = IOUtil.readAsBytes(inputStream, null);
+				
+				InputWay inputWay = new InputWay();
+				inputWay.setByteArray(inBytes);
+				
+				bitmap = ImageUtil.createBitmap(inputWay , width, height);
+
+				if (Log.D) {
+					Log.d(TAG, " AssetsCacheUtils readImage() -->> succeed!");
+				}
+				return new BitmapDrawable(bitmap);
+			}
+		} catch (Exception e) {
+			if (Log.D) {
+				Log.d(TAG, " readImage() -->> " + e.getMessage());
+				e.printStackTrace();
+			}
+		}
+
+		return null;
+	}
+	
+	/**
+	 * 得到/jdcache/打包缓存中的文件输入流
+	 * 
+	 * @param name
+	 *            文件名
+	 * @param extName
+	 *            扩展名
+	 * @return
+	 */
+	public static InputStream open(String name, String extName) {
+		name = name + extName;
+		try {
+			if (Log.D) {
+				Log.d(TAG, " open() -->> name:" + name + ", extName:" + extName);
+			}
+			return MyApplication.getInstance().getResources().getAssets().open("" + File.separator + name);
+
+		} catch (Exception e) {
+			if (Log.D) {
+				Log.d(TAG, " open() -->> " + e.getMessage());
+				e.printStackTrace();
+			}
+		}
+		return null;
+	}
+
+	private static Options getBitmapOpt(int length) {
+		BitmapFactory.Options opt = new BitmapFactory.Options();
+		opt.inPurgeable = true;
+		opt.inInputShareable = true;
+		if (length > 1024 * 64) {
+			opt.inSampleSize = 2;
+		}
+		return opt;
+	}
+
+}

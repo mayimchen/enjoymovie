@@ -1,0 +1,1046 @@
+package com.jingdong.app.mall.utils.frame;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Stack;
+
+import android.app.Activity;
+import android.app.ActivityGroup;
+import android.app.LocalActivityManager;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.view.Display;
+import android.view.Gravity;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.View.OnTouchListener;
+import android.view.ViewGroup;
+import android.view.ViewGroup.LayoutParams;
+import android.view.ViewStub;
+import android.view.ViewTreeObserver;
+import android.view.WindowManager;
+import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RadioGroup;
+
+import com.jingdong.app.mall.MainActivity;
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.login.LoginUser;
+import com.jingdong.app.mall.utils.DPIUtil;
+import com.jingdong.app.mall.utils.Log;
+import com.jingdong.app.mall.utils.MyActivity;
+import com.jingdong.app.mall.utils.MyUncaughtExceptionHandler;
+
+public class ScrollableTabActivity extends ActivityGroup {
+
+	private LocalActivityManager activityManager;// activity 管理
+	private LinearLayout contentViewLayout;// 内容包裹
+	private LinearLayout.LayoutParams contentViewLayoutParams;// 把子 activity
+	// 往里添的时候需要
+	private HorizontalScrollView bottomBar;
+	private RadioGroup.LayoutParams buttonLayoutParams;
+	private RadioGroup bottomRadioGroup;
+	private ImageView arrow_left, arrow_right;
+	private boolean isShowArrow;
+	private Context context;
+	private List<ButtonAction> buttonActionList;
+	private List<String> titleList;
+	private List<int[]> states;
+	private int defaultOffShade;
+	private int defaultOnShade;
+
+	private final String FLAG_TITLE = "购物车";
+
+	private int counter;
+
+	private int navigationDisplayMode;// 当前导航栏模式
+	public static final String HOME_ACTIVITY_BUTTON_IS_DOWN = "home_button_down";
+	public static final String SINGLE_INSTANCE_FLAG = "com.360buy:singleInstanceFlag";// 单例标记
+	public static final String TASK_ID_FLAG = "com.360buy:taskIdFlag";// 任务标记
+	public static final String RESEND_FLAG = "com.360buy:resendFlag";// 重定向标记
+	public static final String NAVIGATION_FLAG = "com.360buy:navigationFlag";// 导航标记
+	public static final String NAVIGATION_DISPLAY_FLAG = "com.360buy:navigationDisplayFlag";// 导航显示标记
+	public static final int NAVIGATION_DISPLAY_HIDE = -1;// 导航隐藏
+	public static final int NAVIGATION_DISPLAY_SHOW = 0;// 导航显示
+
+	public static final String NAVIGATION_ID = "com.360buy:navigationId";// 可以在intent中通过本KEY获取导航ID
+	public static final int NAVIGATION_HOME = 0;// 首页
+	public static final int NAVIGATION_SERACH = 1;// 搜索
+	public static final int NAVIGATION_CATEGORY = 2;// 分类
+	public static final int NAVIGATION_SHOPPINGCAR = 3;// 购物车
+	public static final int NAVIGATION_MYJD = 4;// 我的京东
+	public static final int NAVIGATION_MORE = 5;// 更多
+
+	public static boolean isCanOnTouch = true;// 导航栏是否支持onTouch
+
+	private Stack<Record> recordList = new Stack<Record>();// 历史栈
+	private ArrayList<Record> singleInstanceRecordList = new ArrayList<Record>();// 单例库
+	private HashMap<String, Integer> recordIdAndRadioId = new HashMap<String, Integer>();// Record
+
+	// id
+	// 与
+	// Radio
+	// id
+	// 的对应关系
+
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		context = this;// 初始化
+
+		activityManager = getLocalActivityManager();// 初始化
+		setContentView(R.layout.custom_sliding_tab_host);// 整体布局
+
+		// 保证键盘弹出时界面不缩放。
+		// int height = getWindowManager().getDefaultDisplay().getHeight();
+		// ViewGroup findViewById = (ViewGroup)findViewById(R.id.main_layout);
+		// findViewById.getLayoutParams().height = height - DPIUtil.dip2px(25);
+
+		contentViewLayout = (LinearLayout) findViewById(R.id.contentViewLayout);// 内容
+		bottomBar = (HorizontalScrollView) findViewById(R.id.bottomBar);// 横拖
+		bottomRadioGroup = (RadioGroup) findViewById(R.id.bottomMenu);// 单选
+		arrow_left = (ImageView) findViewById(R.id.arrow_left);// 箭头
+		arrow_right = (ImageView) findViewById(R.id.arrow_right);// 箭头
+		contentViewLayoutParams = new LinearLayout.LayoutParams(LayoutParams.FILL_PARENT, LayoutParams.FILL_PARENT); // 把子
+		// activity
+		// 往里添的时候需要的布局参数
+
+		defaultOffShade = RadioStateDrawable.SHADE_GRAY;// 默认按钮后台时候的颜色 - 灰色
+		defaultOnShade = RadioStateDrawable.SHADE_YELLOW;// 默认按钮激活时候的样式 - 黄色
+
+		bottomRadioGroup.setOnCheckedChangeListener(radioGroupListener);// 设置单选按钮们的点击事件
+		buttonActionList = new ArrayList<ButtonAction>();// intent 缓存
+		titleList = new ArrayList<String>();// title 缓存
+		states = new ArrayList<int[]>();// 状态缓存 就是保存不同状态时的图标该如何处理的图标id或者颜色值
+
+		buttonLayoutParams = new RadioGroup.LayoutParams(320 / 5, RadioGroup.LayoutParams.WRAP_CONTENT);// 单选按钮们的布局,宽度是320dp除以5份,高度是包裹,下面根本不用,白定义
+
+		// 监控布局改变
+		View decorView = getWindow().getDecorView();
+		ViewTreeObserver viewTreeObserver = decorView.getViewTreeObserver();
+
+		ViewGroup group = (ViewGroup) ((ViewGroup) decorView).getChildAt(0);
+
+		View view = group.getChildAt(0);
+
+		if (view instanceof ViewStub) {
+			view = ((ViewGroup) (group.getChildAt(1))).getChildAt(0);
+		}
+
+		layoutListener.init(view);
+		viewTreeObserver.removeGlobalOnLayoutListener(layoutListener);
+		viewTreeObserver.addOnGlobalLayoutListener(layoutListener);
+		bottomBar.setOnTouchListener(new OnTouchListener() {
+			final Handler handler = new Handler() {
+				@Override
+				public void dispatchMessage(Message msg) {
+					super.dispatchMessage(msg);
+					onChange();
+				}
+			};
+
+			private void onChange() {
+				if (isShowArrow) {
+					if (bottomBar.getScrollX() <= DPIUtil.dip2px(15)) {
+						arrow_left.setVisibility(View.GONE);
+						arrow_right.setVisibility(View.VISIBLE);
+					} else if (bottomBar.getScrollX() > (DPIUtil.dip2px(64) - DPIUtil.dip2px(15))) {
+						arrow_right.setVisibility(View.GONE);
+						arrow_left.setVisibility(View.VISIBLE);
+					}
+				}
+			}
+
+			@Override
+			public boolean onTouch(View v, MotionEvent event) {
+				if (Log.D) {
+					System.out.println("bottomBar.getScrollX() = " + bottomBar.getScrollX());
+				}
+				onChange();
+				handler.sendEmptyMessageDelayed(0, 500);
+				return false;
+			}
+		});
+
+	}
+
+	// 用于监控布局变化
+	private LayoutListener layoutListener = new LayoutListener();
+
+	private class LayoutListener implements ViewTreeObserver.OnGlobalLayoutListener {
+
+		public int initHeight;
+
+		private View view;
+		private int originalHeigth;
+
+		@Override
+		public void onGlobalLayout() {// 每次重新布局事件判断高度以隐藏或显示导航栏
+
+			if (navigationDisplayMode == NAVIGATION_DISPLAY_HIDE) {
+				return;
+			}
+
+			int nowHeight = view.getHeight();
+			if (0 == initHeight) {
+				/*
+				 * 适配酷派合作商时发现如果前一个应用是全屏模式，那过来的时候会造成
+				 * 
+				 * 初始化高度永远大于当前高度 那就当做是弹出键盘的样子了，永远都隐藏导航栏了
+				 * 
+				 * 因为一般键盘都要比导航栏要高，而任务栏比导航栏要矮，
+				 * 
+				 * 因此我们把初始化高度增加50dip（导航栏高度）
+				 */
+				setOriginalHeigth(nowHeight);
+				initHeight = nowHeight - DPIUtil.dip2px(50);
+			}
+			if (initHeight <= nowHeight) {// 高度一致，准备放大
+				new Handler().postDelayed(new Runnable() {
+					@Override
+					public void run() {
+						if (navigationDisplayMode == NAVIGATION_DISPLAY_HIDE) {
+							return;
+						}
+
+						showNavigation();
+					}
+				}, 100);
+			} else {// 准备缩小
+				hideNavigation();
+			}
+		}
+
+		public void init(View view) {
+			this.view = view;
+			this.initHeight = 0;
+		}
+
+		public void setOriginalHeigth(int heigth) {
+			this.originalHeigth = heigth;
+		}
+
+		public int getOriginalHeigth() {
+			return originalHeigth;
+		}
+
+	}
+
+	private OnTouchListener radioOnTouchListener = new OnTouchListener() {
+		@Override
+		public boolean onTouch(View v, MotionEvent event) {
+			return !isCanOnTouch;
+		}
+	};
+
+	public void commit() {
+		bottomRadioGroup.removeAllViews();// 清理
+
+		int optimum_visible_items_in_portrait_mode = 5;// 默认舞台摆下5个按钮
+		try {
+			WindowManager window = getWindowManager();
+			Display display = window.getDefaultDisplay();// 算是舞台吧
+			int window_width = display.getWidth();// 得到舞台宽度
+
+			optimum_visible_items_in_portrait_mode = (int) (window_width / DPIUtil.dip2px(64));// 每个按钮最少宽64dp，看舞台能摆下多少个按钮
+		} catch (Exception e) {
+			optimum_visible_items_in_portrait_mode = 5;
+		}
+
+		int screen_width = getWindowManager().getDefaultDisplay().getWidth();// 又一次获得舞台宽度
+		int width;
+		if (buttonActionList.size() <= optimum_visible_items_in_portrait_mode)// 如果需要放的按钮少于舞台适合容纳的按钮数量,那么均分剩余的空间
+		{
+			width = screen_width / buttonActionList.size();
+		} else// 否则就屏幕宽度分成合适放下的份数吧.
+		{
+			width = screen_width / 5;
+			isShowArrow = true;
+			arrow_right.setVisibility(View.VISIBLE);
+		}
+		RadioStateDrawable.width = width;// 给自定义的单选按钮绘画器定义每个按钮的宽度
+		RadioStateDrawable.screen_width = screen_width;// 也告诉屏幕的宽度
+		buttonLayoutParams = new RadioGroup.LayoutParams(width, RadioGroup.LayoutParams.FILL_PARENT);// 不使用上面定义的,这里根据实际情况来定义宽度.
+
+		for (int i = 0; i < buttonActionList.size(); i++) {
+			TabBarButton tabButton = new TabBarButton(this);
+			if (FLAG_TITLE.equals(titleList.get(i).toString())) {
+				MainActivity.setCarStateController(tabButton.getStateController());
+			}
+			int[] iconStates = (int[]) states.get(i);
+			// 根据不同的addTab去适应吧
+			if (iconStates.length == 1)
+				tabButton.setState(titleList.get(i).toString(), iconStates[0]);
+			else if (iconStates.length == 2)
+				tabButton.setState(titleList.get(i).toString(), iconStates[0], iconStates[1]);
+			else if (iconStates.length == 3)
+				tabButton.setState(titleList.get(i).toString(), iconStates[0], iconStates[1], iconStates[2]);
+			// 上面设置图标,然后下面是id和居中
+			tabButton.setBackgroundResource(R.drawable.main_navigation_highlight_bg_x);
+			tabButton.setId(i);
+			tabButton.setGravity(Gravity.CENTER);
+			tabButton.setOnTouchListener(radioOnTouchListener);
+			// 然后就弄进单选按钮组,id是i
+			bottomRadioGroup.addView(tabButton, i, buttonLayoutParams);
+		}
+
+		bottomRadioGroup.check(0);
+		ButtonAction action = (ButtonAction) buttonActionList.get(0);
+		action.run();
+	}
+
+	protected void addTab(ButtonStyle style, ButtonAction action) {
+	}
+
+	protected void setDefaultShade(int offShade, int onShade)// 外部可以另外通过这个方法来设置开关颜色.
+	{
+		defaultOffShade = offShade;
+		defaultOnShade = onShade;
+	}
+
+	public void setCurrentTab(int index)// 内部的activity通知要求改变不同的单选界面，通过广播过来要求的
+	{
+		bottomRadioGroup.check(index);
+	}
+
+	/**
+	 * 跳走标记
+	 */
+	private boolean jump;
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-26 下午09:09:00
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 标记为之后跳过该页，不能再访问该页
+	 * 
+	 * 
+	 */
+	public void markJump() {
+		jump = true;
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-26 下午09:09:31
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 执行相关操作
+	 * 
+	 * 
+	 */
+	private void doJump() {
+		jump = false;
+		removeRecordTop();
+	}
+
+	/**
+	 * 清除标志位 防止用物理返回键引起的返回错误
+	 */
+	public void clearJump() {
+		if (isJump()) {
+			jump = false;
+		}
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-26 下午09:09:48
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 判断本页是否需要跳走
+	 * 
+	 * @return
+	 * 
+	 */
+	private boolean isJump() {
+		return jump;
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-5 下午05:46:26
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 判断是否导航
+	 * 
+	 * @param intent
+	 * @return
+	 * 
+	 */
+	private boolean isNavigation(Intent intent) {
+		return intent.getBooleanExtra(NAVIGATION_FLAG, false);
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-5 下午05:49:01
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 获得导航ID
+	 * 
+	 * @param intent
+	 * @return
+	 * 
+	 */
+	private Integer getNavigationId(Intent intent) {
+		if (isNavigation(intent)) {
+			return intent.getIntExtra(NAVIGATION_ID, 0);
+		}
+		return null;
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-4 下午02:33:24
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 判断是否单例
+	 * 
+	 * @param intent
+	 * @return
+	 * 
+	 */
+	public static boolean isSingleInstance(Intent intent) {
+		return intent.getBooleanExtra(SINGLE_INSTANCE_FLAG, false);
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-4 下午02:33:24
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 判断是否重定向
+	 * 
+	 * @param intent
+	 * @return
+	 * 
+	 */
+	private boolean isResend(Intent intent) {
+		return intent.getBooleanExtra(RESEND_FLAG, false);
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-4 下午02:33:22
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 查找已存在的单例
+	 * 
+	 * @param intent
+	 * @return
+	 * 
+	 */
+	private Record findsingleInstanceRecord(Intent intent) {
+		for (Iterator<Record> iterator = singleInstanceRecordList.iterator(); iterator.hasNext();) {
+			Record unit = iterator.next();
+			if (unit.getIntent().getComponent().getClassName().equals(intent.getComponent().getClassName())) {
+				return unit;
+			}
+		}
+		return null;
+	}
+
+	private Stack<Runnable> resendRequests = new Stack<Runnable>();
+
+	public void pushResendRequest(Runnable runnable) {
+		resendRequests.push(runnable);
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-4 下午02:34:03
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 切换 SubActivity 的命令
+	 * 
+	 * @param intent
+	 * 
+	 */
+	public Record startSubActivity(Intent intent) {
+		if (Log.D) {
+			Log.d("MyActivity", "startSubActivity() -->> " + intent);
+		}
+		// 是否单例模式
+		if (isSingleInstance(intent)) {
+			Record r = findsingleInstanceRecord(intent);
+			if (Log.D) {
+				Log.d("MyActivity", "startSubActivity() findsingleInstanceRecord() r -->> " + r);
+			}
+			if (null != r) {
+				// 单例直接加入历史
+				r.setIntent(intent);
+				newActivity(r);
+				return r;
+			}
+		}
+		counter++;
+		return newActivity("subActivity:" + counter, intent);
+	}
+
+	public Record newActivity(String id, Intent intent) {
+		if (Log.D) {
+			Log.d("MyActivity", "newActivity() -->> " + intent);
+		}
+		Record record = new Record();
+		record.setId(id);
+		record.setIntent(intent);
+		if (isSingleInstance(intent)) {
+			singleInstanceRecordList.add(record);
+		}
+		newActivity(record);
+		return record;
+	}
+
+	private boolean isPrevNotInRecord;
+
+	private HashMap<String, Object> getTaskId(Intent intent) {
+		return (HashMap<String, Object>) intent.getSerializableExtra(TASK_ID_FLAG);
+	}
+
+	public void newActivity(Record record) {
+		if (Log.D) {
+			Log.d("MyActivity", "newActivity() -->> " + record);
+		}
+
+		// 跳过不加入历史栈的相关措施
+		if (isResend(record.getIntent())) {// 属于马上转跳并不留记录
+			if (Log.D) {
+				Log.d("MyActivity", "newActivity() do resend -->> " + record);
+			}
+			removeRecordTop();
+		} else if (isJump()) {// 属于稍后转跳并不留记录
+			if (Log.D) {
+				Log.d("MyActivity", "newActivity() do jump -->> " + record);
+			}
+			doJump();
+		}
+
+		if (!recordList.isEmpty()) {
+			Record prevRecord = recordList.peek();
+			HashMap<String, Object> prevTaskId = getTaskId(prevRecord.getIntent());
+			if (null != prevTaskId) {
+				HashMap<String, Object> taskId = getTaskId(record.getIntent());
+				if (null == taskId || !prevTaskId.equals(taskId)) {
+					if (Log.D) {
+						Log.d("MyActivity", "newActivity() remove task record -->> " + record);
+					}
+					// TODO 提示是否离开任务
+					removeRecordTop();
+				}
+			}
+		}
+
+		// 挑选部分加进历史栈
+		// if (!isNavigation(record.getIntent()) || 0 == recordList.size() ||
+		// "com.jd.app.trade.category.CategoryActivity".equals(record.getIntent().getComponent().getClassName()))
+		// {
+		if (!isSingleInstance(record.getIntent()) || //
+				recordList.isEmpty() || //
+				!recordList.peek().getIntent().getComponent().getClassName().equals(record.getIntent().getComponent().getClassName())) {
+			recordList.push(record);
+		}
+		// } else {
+		// isPrevNotInRecord = true;
+		// }
+
+		// 保存 Record id 与 Radio id 的对应关系
+		Integer navigationId = getNavigationId(record.getIntent());
+		if (null != navigationId && null == findRadioId(record.getId())) {
+			if (Log.D) {
+				Log.d("MyActivity", "newActivity() save Record id and Radio id -->> " + record);
+			}
+			recordIdAndRadioId.put(record.getId(), navigationId);
+		}
+
+		// 收集错误信息
+		collectErrorData(record.getIntent());
+
+		showActivity(record.getId(), record.getIntent());
+
+	}
+
+	/**
+	 * @author lifen
+	 * 
+	 *         Time: 2011-7-26 上午10:13
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 收集错误信息
+	 * 
+	 * @param intent
+	 * 
+	 */
+
+	private void collectErrorData(Intent intent) {
+		Bundle bundle = intent.getExtras();
+		StringBuffer stringBuffer = new StringBuffer();
+		stringBuffer.append("activity class name：" + intent.getComponent().getClassName());
+		stringBuffer.append("，intent content：");
+		if (null != bundle) {
+			Iterator<?> it = bundle.keySet().iterator();
+			while (it.hasNext()) {
+				String key = it.next().toString();
+				stringBuffer.append(key + "：");
+				String value = null == bundle.get(key) ? "<null>" : bundle.get(key).toString();
+				stringBuffer.append(value + "，");
+			}
+		}
+
+		MyUncaughtExceptionHandler.resetErrorInfo(stringBuffer.toString());
+
+	}
+
+	private void showActivity(String id, Intent intent) {
+		if (Log.D) {
+			Log.d("MyActivity", "showActivity() -->> " + intent);
+		}
+
+		// 记录导航该隐藏还是显示
+		navigationDisplayMode = intent.getIntExtra(NAVIGATION_DISPLAY_FLAG, 0);
+
+		// 并作处理
+		switch (navigationDisplayMode) {
+		case NAVIGATION_DISPLAY_HIDE:
+			hideNavigation();
+			break;
+		default:
+			showNavigation();
+			break;
+		}
+
+		contentViewLayout.removeAllViews();
+		View view = activityManager.startActivity(id, intent).getDecorView();
+
+		// 检查转跳任务
+		if (!resendRequests.isEmpty()) {
+			Runnable runnable = resendRequests.pop();
+			resendRequests.clear();
+			runnable.run();
+			return;
+		}
+		Activity currentActivity = getCurrentActivity();
+		currentActivity.setIntent(intent);// new add
+		if (currentActivity instanceof MyActivity) {
+			((MyActivity) currentActivity).canNotResend();
+		}
+
+		contentViewLayout.addView(view, contentViewLayoutParams);
+
+		if (Log.D) {
+			Log.d("MyActivity", "showActivity() view ok ready highlight -->> " + intent);
+		}
+
+		// TODO 这里还有作用吗？我都忘了，注释掉验证一下。试了直接点击转到以及后退转到分类和购物车，没有发现问题。
+		// if (".category.CategoryActivity".equals(intent.getComponent().getShortClassName())) {
+		// checkNoEvent(1);
+		// return;
+		// } else if (".shopping.ShoppingCarActivity".equals(intent.getComponent().getShortClassName())) {
+		// checkNoEvent(2);
+		// return;
+		// }
+
+		// 判断并亮灯
+		check(id);
+
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-5 下午03:19:24
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 判断并亮灯
+	 * 
+	 * @param id
+	 * 
+	 */
+	private void check(String id) {
+		Integer radioId = findRadioId(id);
+		if (null != radioId) {
+			checkNoEvent(radioId);
+		} else {
+			checkNoEvent(-1);
+		}
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-5 下午04:02:28
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 修改单选导航，但不触发事件
+	 * 
+	 * @param bottomRadioGroup2
+	 * @param radioId
+	 * 
+	 */
+	private void checkNoEvent(Integer radioId) {
+		if (bottomRadioGroup.getCheckedRadioButtonId() != radioId) {
+			radioGroupListener.setOldFlag(true);
+			radioGroupListener.setmNow(radioId);
+			bottomRadioGroup.check(radioId);
+		}
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-5 下午03:30:24
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 非 null 就代表的确是导航界面
+	 * 
+	 * @param id
+	 * @return 导航界面ID所对应的单选导航栏按钮ID
+	 * 
+	 */
+	private Integer findRadioId(String id) {
+		return recordIdAndRadioId.get(id);
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-20 下午02:11:02
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 移除历史顶
+	 * 
+	 * 
+	 */
+	public void removeRecordTop() {
+		if (isPrevNotInRecord) {
+			isPrevNotInRecord = false;
+			return;
+		}
+		if (recordList.empty()) {
+			return;
+		}
+		Record old = recordList.pop();
+		if (!isSingleInstance(old.getIntent())) {
+			// TODO 如果是单例模式，必须判断是最后一个，才移除。
+			activityManager.destroyActivity(old.getId(), true);
+		}
+	}
+
+	/**
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-2-10 下午03:43:42
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 清除所有历史 isDestoryActivity：是否销毁activity，销毁必须在主线程中执行
+	 * 
+	 * 
+	 */
+	public void removeAllRecords(boolean isDestoryActivity) {
+		if (!isDestoryActivity) {
+			for (int i = (recordList.size() - 1); i > 1; i--) {
+				recordList.pop();
+			}
+		} else {
+			for (int i = recordList.size(); i > 1; i--) {
+				final Record old = recordList.pop();
+				if (!isSingleInstance(old.getIntent())) {
+					activityManager.destroyActivity(old.getId(), true);
+				}
+			}
+		}
+	}
+
+	/**
+	 * 清除所有单例实例，只剩下第一个
+	 */
+	public void removeAllSingleInstances() {
+		for (int i = singleInstanceRecordList.size() - 1; i > 0; i--) {
+			final Record old = singleInstanceRecordList.get(i);
+			activityManager.destroyActivity(old.getId(), true);
+			singleInstanceRecordList.remove(i);
+		}
+	}
+
+	@Override
+	public void finish() {
+		removeRecordTop();
+		if (!recordList.empty()) {
+			Record cur = recordList.peek();
+			showActivity(cur.getId(), cur.getIntent());
+			return;
+		}
+		LoginUser.setUserStateOff(false); // 退出之前设置为未登录状态。
+		super.finish();
+	}
+
+	/**
+	 * finish主界面
+	 */
+	public void finishThis() {
+		super.finish();
+	}
+
+	@Override
+	public void finishFromChild(Activity child) {
+		finish();
+	}
+
+	@Override
+	public boolean dispatchKeyEvent(KeyEvent event) {// 由于事件无法传达到subActivity，因此作如下处理
+		try {
+			Activity currentActivity = activityManager.getCurrentActivity();
+			if (null == currentActivity) {
+				return super.dispatchKeyEvent(event);
+			}
+			if (event.getKeyCode() != KeyEvent.KEYCODE_DEL && currentActivity.dispatchKeyEvent(event)) {
+				// TODO
+				// 没弄清底层的临时处理法。按目前所知会跳过本Activity中的2层ViewGroup导致其无法获得事件信息，但按目前设计需求，不会造成任何影响。
+				// 这里应该只包括按键事件，如果Touch出现任何问题，请如法炮制。
+				return true;
+			}
+			return super.dispatchKeyEvent(event);
+		} catch (IllegalStateException e) {
+			if (Log.E) {
+				e.printStackTrace();
+			}
+			return true;
+		}
+		
+	}
+
+	/**
+	 * 单选导航的监听器
+	 */
+	private CheckedChangeListener radioGroupListener = new CheckedChangeListener();
+
+	class CheckedChangeListener implements RadioGroup.OnCheckedChangeListener {
+
+		private boolean oldFlag;
+		private int mNow;
+
+		public void onCheckedChanged(RadioGroup group, int checkedId) {
+			// 单选按钮们的点击事件
+			if (oldFlag) {
+				oldFlag = false;
+				return;
+			}
+			if (mNow == checkedId){
+				// 如果一致就不做处理
+				return;
+			}
+
+			int old = mNow;// 旧的
+			mNow = checkedId;
+
+			ButtonAction action = (ButtonAction) buttonActionList.get(checkedId);
+			if (!action.isHighlight()) {// 如果不亮灯则恢复原来的
+				checkNoEvent(old);
+			}
+			action.run();
+		}
+
+		public void setmNow(int mNow) {
+			this.mNow = mNow;
+		}
+
+		public void setOldFlag(boolean oldFlag) {
+			this.oldFlag = oldFlag;
+		}
+
+	};
+
+	/**
+	 * Copyright 2011 Jingdong Android Mobile Application
+	 * 
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-4 下午02:14:27
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 历史记录
+	 */
+	private static class Record {
+
+		private String id;
+		private Intent intent;
+
+		public String getId() {
+			return id;
+		}
+
+		public void setId(String id) {
+			this.id = id;
+		}
+
+		public Intent getIntent() {
+			return intent;
+		}
+
+		public void setIntent(Intent intent) {
+			this.intent = intent;
+		}
+
+	}
+
+	public void hideNavigation() {
+		((View) bottomBar.getParent()).setVisibility(View.GONE);
+	}
+
+	public void showNavigation() {
+		((View) bottomBar.getParent()).setVisibility(View.VISIBLE);
+	}
+
+	public class ButtonStyle {
+
+		public ButtonStyle(String title, int iconStateId) {// 标题和默认图标,颜色由内部默认控制
+			int[] iconStates = { iconStateId, defaultOffShade, defaultOnShade };
+			states.add(iconStates);
+			titleList.add(title);
+		}
+
+		public ButtonStyle(String title, int offIconStateId, int onIconStateId) {// 标题和开关图标
+			int[] iconStates = { onIconStateId, offIconStateId };
+			states.add(iconStates);
+			titleList.add(title);
+		}
+
+		public ButtonStyle(String title, int iconStateId, int offShade, int onShade) {// 标题,图标,以及开关的颜色
+			int[] iconStates = { iconStateId, offShade, onShade };
+			states.add(iconStates);
+			titleList.add(title);
+		}
+
+	}
+
+	public class ButtonAction {
+		private Runnable mRunnable;
+		private boolean highlight;
+
+		public ButtonAction(final Intent intent) {
+			this(new Runnable() {
+				public void run() {
+					startSubActivity(intent);
+				}
+			});
+		}
+
+		public ButtonAction(final Intent intent, boolean highlight) {
+			this(new Runnable() {
+				public void run() {
+					startSubActivity(intent);
+				}
+			}, highlight);
+		}
+		
+		public ButtonAction(Runnable runnable) {
+			this(runnable, true);
+		}
+		
+		public ButtonAction(Runnable runnable, boolean highlight) {
+			mRunnable = runnable;
+			buttonActionList.add(this);
+			setHighlight(highlight);
+		}
+		
+		//重载、区别是首页的按钮
+		public ButtonAction(final Intent intent, boolean highlight,boolean isTabRunnable){
+			if(isTabRunnable){
+				mRunnable = new TabRunnable(intent);
+			}else{
+				mRunnable = new Runnable() {
+				public void run() {
+					startSubActivity(intent);
+				}};
+			}
+			buttonActionList.add(this);
+			setHighlight(highlight);
+		}
+		
+		public void run() {
+			if(mRunnable instanceof TabRunnable){
+				((TabRunnable)mRunnable).setOnkeyDown(true);
+			}
+			mRunnable.run();
+		}
+
+		public boolean isHighlight() {
+			return highlight;
+		}
+
+		public void setHighlight(boolean highlight) {
+			this.highlight = highlight;
+		}
+	}
+
+	public int getBottomBarBottom() {
+		int bottomBarBottom = 0;
+		bottomBarBottom = layoutListener.getOriginalHeigth();
+		if (Log.D) {
+			Log.d("xudong", "bottomBarBottom -->> " + bottomBarBottom);
+		}
+		return bottomBarBottom;
+	}
+	
+    public class TabRunnable implements Runnable{
+    	//首页按钮按下标志
+        private boolean isOnkeyDown;
+        //页面跳转Intent
+        private Intent tabIntent;
+        
+        private TabRunnable(final Intent intent){
+        	this.tabIntent = intent;
+        }
+        
+        public void setOnkeyDown(boolean onkeyDown) {
+            this.isOnkeyDown = onkeyDown;
+        }
+        
+		@Override
+		public void run() {
+			//首页按钮按下
+			if(isOnkeyDown){
+				tabIntent.putExtra(HOME_ACTIVITY_BUTTON_IS_DOWN, isOnkeyDown);
+				isOnkeyDown = false;
+				startSubActivity(tabIntent);
+				tabIntent.putExtra(HOME_ACTIVITY_BUTTON_IS_DOWN, isOnkeyDown);
+			}else{
+				startSubActivity(tabIntent);
+			}
+		}
+    	
+    }
+}

@@ -1,0 +1,128 @@
+package com.jingdong.app.mall.utils.ui.view;
+
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.config.CacheTimeConfig;
+import com.jingdong.app.mall.entity.JdOrderStat;
+import com.jingdong.app.mall.utils.HttpGroup;
+import com.jingdong.app.mall.utils.ImageUtil;
+import com.jingdong.app.mall.utils.Log;
+import com.jingdong.app.mall.utils.MyActivity;
+import com.jingdong.app.mall.utils.HttpGroup.HttpError;
+import com.jingdong.app.mall.utils.HttpGroup.HttpGroupSetting;
+import com.jingdong.app.mall.utils.HttpGroup.HttpResponse;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSetting;
+import com.jingdong.app.mall.utils.ImageUtil.InputWay;
+import com.jingdong.app.mall.utils.ExceptionDrawable;
+
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+public class AdapterItemView {
+
+	private final String TAG = "AdapterItemView";
+
+	private View root;
+	private View line;
+	private MyActivity mContext;
+
+	public AdapterItemView(MyActivity context) {
+		mContext = context;
+		root = ImageUtil.inflate(R.layout.app_my_jd_item, null);
+
+	}
+
+	public View getView() {
+		return root;
+	}
+
+	public void setData(JdOrderStat orderStat) {
+		if (root == null) {
+			throw new NullPointerException(TAG);
+		}
+		final ImageView icon = (ImageView) root.findViewById(R.id.app_my_jd_item_icon);
+		final TextView name = (TextView) root.findViewById(R.id.app_my_jd_item_text);
+		line = root.findViewById(R.id.app_my_jd_item_line);
+		name.setText(orderStat.getName());
+		final String url = orderStat.getIcon();
+		try {
+			icon.setBackgroundResource(Integer.parseInt(url));
+		} catch (Exception e) {
+			setDrawable(icon, url);
+		}
+	}
+
+	public void setLineVisibility(int flag) {
+		if (line != null) {
+			line.setVisibility(flag);
+		}
+	}
+
+	/**
+	 * 加载商品图片
+	 * 
+	 * @param context
+	 * @param icon
+	 * @param url
+	 */
+	public void setDrawable(final ImageView icon, String url) {
+		icon.setBackgroundDrawable(new ExceptionDrawable(mContext, mContext.getResources().getString(R.string.loading)));
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setUrl(url);
+		httpSetting.setType(HttpGroupSetting.TYPE_IMAGE);
+		httpSetting.setCacheMode(HttpSetting.CACHE_MODE_AUTO);
+		httpSetting.setLocalFileCache(true);
+		httpSetting.setLocalFileCacheTime(CacheTimeConfig.MY_JD_ORDER_BUTTON_IMAGE_CACHE);
+		httpSetting.setEffect(HttpSetting.EFFECT_NO);
+		httpSetting.setListener(new HttpGroup.OnAllListener() {
+
+			@Override
+			public void onProgress(int max, int progress) {
+
+			}
+
+			@Override
+			public void onError(HttpError error) {
+				if (Log.D) {
+					Log.d(TAG, " -->> " + error.getErrorCodeStr());
+				}
+				mContext.post(new Runnable() {
+					@Override
+					public void run() {
+						icon.setBackgroundDrawable(new ExceptionDrawable(mContext, mContext.getResources().getString(R.string.no_image)));
+					}
+				});
+			}
+
+			@Override
+			public void onEnd(HttpResponse httpResponse) {
+				if (Log.D) {
+					Log.d(TAG, " -->> onEnd");
+				}
+				Bitmap bitmap = ImageUtil.createBitmap(InputWay.createInputWay(httpResponse) , 0, 0);
+				BitmapDrawable bitmapDrawable = new BitmapDrawable(bitmap);
+				final Drawable drawable = bitmapDrawable;
+				mContext.post(new Runnable() {
+					@Override
+					public void run() {
+						if (drawable != null) {
+							icon.setBackgroundDrawable(drawable);
+						} else {
+							icon.setBackgroundDrawable(new ExceptionDrawable(mContext, mContext.getResources().getString(R.string.no_image)));
+						}
+					}
+				});
+
+			}
+
+			@Override
+			public void onStart() {
+
+			}
+		});
+		mContext.getHttpGroupaAsynPool().add(httpSetting);
+	}
+}

@@ -1,0 +1,1167 @@
+package com.jingdong.app.mall.utils;
+
+import java.util.ArrayList;
+
+import android.content.Context;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteDatabase.CursorFactory;
+
+import com.jingdong.app.mall.MyApplication;
+import com.jingdong.app.mall.database.table.CacheFileTable;
+import com.jingdong.app.mall.database.table.CommAddrTable;
+import com.jingdong.app.mall.database.table.DB_CartTable;
+import com.jingdong.app.mall.database.table.DB_PacksTable;
+import com.jingdong.app.mall.database.table.FavorityTable;
+import com.jingdong.app.mall.database.table.HistoryTable;
+import com.jingdong.app.mall.database.table.PushMessageTable;
+import com.jingdong.app.mall.database.table.ScanCodeTable;
+import com.jingdong.app.mall.database.table.SearchHistoryTable;
+import com.jingdong.app.mall.database.table.UnExcuteFunctionTable;
+import com.jingdong.app.mall.entity.BarcodeRecord;
+import com.jingdong.app.mall.entity.CartTable;
+import com.jingdong.app.mall.entity.CommAddr;
+import com.jingdong.app.mall.entity.PacksTable;
+import com.jingdong.app.mall.entity.Product;
+
+/**
+ * 
+ * @Title: 数据库操作帮助类
+ * @Description:
+ * @Author:Zhangjunping
+ * @Since:2011-1-6
+ * @Version:1.0.0
+ */
+public class DBHelperUtil {
+
+	private SQLiteDatabase db = null;
+	private static int versionCode = 1;
+	private Cursor c;
+
+	private static final String DB_NAME = "jd.db";
+
+	private Context mContext;
+	private static OpenHelper mOpenHelper;
+	
+	private static final String TAG="DBHelperUtil";
+
+	public static synchronized SQLiteDatabase getDatabase() {
+		if (null == mOpenHelper) {
+			try {
+				versionCode = MyApplication.getInstance().getPackageManager().getPackageInfo(MyApplication.getInstance().getPackageName(), 0).versionCode;
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			mOpenHelper = new OpenHelper(MyApplication.getInstance(), DB_NAME, null, versionCode);
+		}
+		try {
+			SQLiteDatabase writableDatabase = mOpenHelper.getWritableDatabase();
+			if (Log.D) {
+				Log.d("Temp", "writableDatabase 1 -->> " + writableDatabase);
+			}
+			return writableDatabase;
+		} catch (Exception e) {
+			e.printStackTrace();
+			MyApplication.getInstance().deleteDatabase(DB_NAME);
+			SQLiteDatabase writableDatabase = mOpenHelper.getWritableDatabase();
+			if (Log.D) {
+				Log.d("Temp", "writableDatabase 2 -->> " + writableDatabase);
+			}
+			return writableDatabase;
+		}
+	}
+
+	public static void closeDatabase() {
+		// mOpenHelper.close();
+	}
+
+	public DBHelperUtil(Context context) {
+		mContext = context;
+	}
+
+	private synchronized void openDatabase() {
+		db = getDatabase();
+	}
+	
+	//------------------ok------------------------
+	/**
+	 * 分页查询浏览历史记录表
+	 * 
+	 * @param pageNum
+	 *            第几页
+	 * @param perlMax
+	 *            每页多少个
+	 * @return
+	 */
+	public ArrayList<Product> getHistoryByPage(int pageNum, int perlMax) {
+
+//		Product product;
+//		ArrayList<Product> list = new ArrayList<Product>();
+//		try {
+//			openDatabase();
+//			String sql = "SELECT id," + History.TB_CLOUMN_PRODUCT_NAME + "," + History.TB_CLOUMN_PRODUCT_CODE + " FROM " + History.TB_HISTORY_TABLE + " ORDER BY " + History.TB_CLOUMN_BROWSE_TIME + " desc LIMIT ?,? ";
+//			String[] selectionArgs = { String.valueOf(pageNum == 1 ? 0 : pageNum * perlMax - 1), String.valueOf(perlMax) };
+//			c = db.rawQuery(sql, selectionArgs);
+//			c.moveToFirst();
+//			if (c != null && c.getCount() != 0) {
+//				final int length = c.getCount();
+//				for (int i = 0; i < length; i++) {
+//					c.moveToPosition(i);
+//					product = new Product();
+//					product.setId(c.getLong(c.getColumnIndex(History.TB_CLOUMN_PRODUCT_CODE)));
+//					product.setName(c.getString(c.getColumnIndexOrThrow(History.TB_CLOUMN_PRODUCT_NAME)));
+//					list.add(product);
+//				}
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		} finally {
+//			if (c != null && !c.isClosed()) {
+//				c.close();
+//			}
+//			DBHelperUtil.closeDatabase();
+//
+//		}
+//
+//		return list;
+		if (Log.D) {
+			Log.d(TAG, "HistoryTable -->> getHistoryByPage");
+		}
+		return HistoryTable.getHistoryByPage(pageNum, perlMax);
+	}
+
+	//----------------------ok------------------------
+	/**
+	 * insert 一条历史记录
+	 * 
+	 * @param pageNum
+	 *            第几页
+	 * @param perlMax
+	 *            每页多少个
+	 * @return
+	 */
+	public  void insertOrUpdateBrowseHistory(long id) {
+//		try {
+//			openDatabase();
+//			ContentValues contentValues = new ContentValues();
+//			String whereArgs = CartTable.TB_CLOUMN_PRODUCT_CODE + " =?";
+//			String[] whereValue = { id + "" };
+//			c = db.query(History.TB_HISTORY_TABLE, null, whereArgs, whereValue, null, null, null);
+//			if (c != null && c.getCount() != 0) {
+//				db.delete(History.TB_HISTORY_TABLE, whereArgs, whereValue);
+//			}
+//
+//			contentValues.put(History.TB_CLOUMN_PRODUCT_CODE, id);
+//			contentValues.put(History.TB_CLOUMN_PRODUCT_NAME, name);
+//			db.insert(History.TB_HISTORY_TABLE, null, contentValues);
+//		} finally {
+//			if (c != null) {
+//				c.close();
+//			}
+//
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "HistoryTable -->> insertOrUpdateBrowseHistory" );
+		}
+		HistoryTable.insertOrUpdateBrowseHistory(id);
+
+	}
+	//--------------------------------ok------------------------?????????????
+	/**
+	 * 
+	 * @param id
+	 *            商品ID
+	 * @param name
+	 *            商品名
+	 * @param count
+	 *            购买数量
+	 * @Description: 插入一条购物车记录(套装)
+	 */
+	public void insertAllPacksCart(ArrayList<PacksTable> cartList) {
+//		try {
+//			openDatabase();
+//			ContentValues contentValues;
+//			if (cartList != null) {
+//				for (int i = 0; i < cartList.size(); i++) {
+//					contentValues = new ContentValues();
+//					PacksTable cart = cartList.get(i);
+//					contentValues.put(PacksTable.TB_COLOUMN_PACK_ID, cart.packId);
+//					contentValues.put(PacksTable.TB_COLOUMN_PRODUCT_NAME, cart.name);
+//					contentValues.put(PacksTable.TB_COLOUMN_BUY_COUNT, cart.buyCount);
+//					contentValues.put(PacksTable.TB_COLOUMN_CHILD_COUNT, cart.childCount);
+//					db.insert(PacksTable.TB_PACKS_TABLE, null, contentValues);
+//				}
+//			}
+//
+//			((MyActivity) mContext).validatCartIcon();// 更新页面购物车数据。
+//		} finally {
+//			// db.close();
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "DB_PacksTable -->> insertAllPacksCart" );
+		}
+		DB_PacksTable.insertAllPacksCart(cartList, mContext);
+	}
+	//----------------------------ok--------------------
+	/**
+	 * 
+	 * @param id
+	 *            商品ID
+	 * @param name
+	 *            商品名
+	 * @param count
+	 *            购买数量
+	 * @Description: 插入一条购物车记录
+	 */
+	public void insertAllCart(ArrayList<CartTable> cartList) {
+//		try {
+//			openDatabase();
+//			ContentValues contentValues;
+//			if (cartList != null) {
+//				for (int i = 0; i < cartList.size(); i++) {
+//					contentValues = new ContentValues();
+//					CartTable cart = cartList.get(i);
+//					contentValues.put(CartTable.TB_CLOUMN_PRODUCT_CODE, cart.productCode);
+//					contentValues.put(CartTable.TB_CLOUMN_PRODUCT_NAME, cart.name);
+//					contentValues.put(CartTable.TB_CLOUMN_BUY_COUNT, cart.buyCount);
+//					db.insert(CartTable.TB_CART_TABLE, null, contentValues);
+//				}
+//			}
+//
+//			if (mContext instanceof MyActivity) {
+//				((MyActivity) mContext).validatCartIcon();// 更新页面购物车数据。
+//			}
+//
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "DB_CartTable -->> insertAllCart" );
+		}
+		DB_CartTable.insertAllCart(cartList, mContext);
+	}
+	//------------------------检查是否写过
+	/**
+	 * 
+	 * @param id
+	 *            商品ID
+	 * @param name
+	 *            商品名
+	 * @param count
+	 *            购买数量
+	 * @Description: 插入一条购物车记录
+	 */
+	public void insertCart(long id, String name, int count, String sourceType, String sourceValue) {
+//		try {
+//			openDatabase();
+//			ContentValues contentValues = new ContentValues();
+//			contentValues.put(CartTable.TB_CLOUMN_PRODUCT_CODE, id);
+//			contentValues.put(CartTable.TB_CLOUMN_PRODUCT_NAME, name);
+//			contentValues.put(CartTable.TB_CLOUMN_BUY_COUNT, count);
+//			db.insert(CartTable.TB_CART_TABLE, null, contentValues);
+//			if (mContext instanceof MyActivity) {
+//				((MyActivity) mContext).validatCartIcon();// 更新页面购物车数据。
+//			}
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "DB_CartTable -->> insertCart");
+		}
+		DB_CartTable.insertCart(id, name, count, sourceType, sourceValue, mContext);
+	}
+	//---------------------------ok
+	/**
+	 * 
+	 * @param id
+	 *            商品ID
+	 * @param name
+	 *            商品名
+	 * @param count
+	 *            购买数量
+	 * @Description: 插入一条购物车记录(套装)
+	 */
+	public void insertPacksCart(long id, String name, int count, int child_count, String sourceType, String sourceValue) {
+//		try {
+//			openDatabase();
+//			ContentValues contentValues = new ContentValues();
+//			contentValues.put(PacksTable.TB_COLOUMN_PACK_ID, id);
+//			contentValues.put(PacksTable.TB_COLOUMN_PRODUCT_NAME, name);
+//			contentValues.put(PacksTable.TB_COLOUMN_BUY_COUNT, count);
+//			contentValues.put(PacksTable.TB_COLOUMN_CHILD_COUNT, child_count);
+//			db.insert(PacksTable.TB_PACKS_TABLE, null, contentValues);
+//			((MyActivity) mContext).validatCartIcon();// 更新页面购物车数据。
+//		} finally {
+//			// db.close();
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "DB_PacksTable -->> insertAllCart" );
+		}
+		DB_PacksTable.insertPacksCart(id, name, count, child_count, sourceType, sourceValue, mContext);
+	}
+	//-----------------------------ok
+	/**
+	 * 
+	 * @param id
+	 *            商品ID
+	 * @param name
+	 *            商品名
+	 * @param count
+	 *            购买数量
+	 * @Description: 更新一条购物车记录(套装)
+	 */
+	public void updatePacksCart(long id, String name, int count, int child_count, String sourceType, String sourceValue) {
+//		try {
+//			openDatabase();
+//			ContentValues contentValues = new ContentValues();
+//			contentValues.put(PacksTable.TB_COLOUMN_PACK_ID, id);
+//			contentValues.put(PacksTable.TB_COLOUMN_PRODUCT_NAME, name);
+//			contentValues.put(PacksTable.TB_COLOUMN_BUY_COUNT, count);
+//			contentValues.put(PacksTable.TB_COLOUMN_CHILD_COUNT, child_count);
+//			String whereArgs = PacksTable.TB_COLOUMN_PACK_ID + " =?";
+//			String[] whereValue = { id + "" };
+//			db.update(PacksTable.TB_PACKS_TABLE, contentValues, whereArgs, whereValue);
+//			((MyActivity) mContext).validatCartIcon();// 更新页面购物车数据。
+//		} finally {
+//			// db.close();
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "DB_PacksTable -->> updatePacksCart" );
+		}
+		DB_PacksTable.updatePacksCart(id, name, count, child_count, sourceType, sourceValue, mContext);
+	}
+
+	//-----------------------ok
+	/**
+	 * 
+	 * @param id
+	 *            商品ID
+	 * @param name
+	 *            商品名
+	 * @param count
+	 *            购买数量
+	 * @Description: 更新一条购物车记录，修改订单来源，暂时用不上了
+	 */
+	public void updateCart(long id, String name, int count, String sourceType, String sourceValue) {
+//		try {
+//			openDatabase();
+//			ContentValues contentValues = new ContentValues();
+//			contentValues.put(CartTable.TB_CLOUMN_PRODUCT_CODE, id);
+//			contentValues.put(CartTable.TB_CLOUMN_PRODUCT_NAME, name);
+//			contentValues.put(CartTable.TB_CLOUMN_BUY_COUNT, count);
+//			String whereArgs = CartTable.TB_CLOUMN_PRODUCT_CODE + " =?";
+//			String[] whereValue = { id + "" };
+//			db.update(CartTable.TB_CART_TABLE, contentValues, whereArgs, whereValue);
+//			if (mContext instanceof MyActivity) {
+//				((MyActivity) mContext).validatCartIcon();// 更新页面购物车数据。
+//			}
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "DB_CartTable -->> updateCart" );
+		}
+		DB_CartTable.updateCart(id, name, count, sourceType, sourceValue, mContext);
+	}
+	/**
+	 * 更新一条购物车记录，不修改订单来源
+	 * @param id
+	 * @param name
+	 * @param count
+	 */
+	public void updateCart(long id, String name, int count) {
+		if (Log.D) {
+			Log.d(TAG, "DB_CartTable -->> updateCart2" );
+		}
+		DB_CartTable.updateCart(id, name, count, mContext);
+	}
+
+	//--------------------ok
+	/**
+	 * 
+	 * @param id
+	 *            商品ID
+	 * @Description: 删除一条购物车记录(套装)
+	 */
+	public void delPacksCart(long id) {
+//		try {
+//			openDatabase();
+//			ContentValues contentValues = new ContentValues();
+//			contentValues.put(PacksTable.TB_COLOUMN_PACK_ID, id);
+//			String whereArgs = PacksTable.TB_COLOUMN_PACK_ID + " =?";
+//			String[] whereValue = { id + "" };
+//			db.delete(PacksTable.TB_PACKS_TABLE, whereArgs, whereValue);
+//			((MyActivity) mContext).validatCartIcon();// 更新页面购物车数据。
+//		} finally {
+//			// db.close();
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "DB_PacksTable -->> delPacksCart" );
+		}
+		DB_PacksTable.delPacksCart(id, mContext);
+	}
+	//-----------------------ok
+	/**
+	 * 
+	 * @param id
+	 *            商品ID
+	 * @Description: 删除一条购物车记录
+	 */
+	public void delCart(long id) {
+//		try {
+//			openDatabase();
+//			ContentValues contentValues = new ContentValues();
+//			contentValues.put(CartTable.TB_CLOUMN_PRODUCT_CODE, id);
+//			String whereArgs = CartTable.TB_CLOUMN_PRODUCT_CODE + " =?";
+//			String[] whereValue = { id + "" };
+//			db.delete(CartTable.TB_CART_TABLE, whereArgs, whereValue);
+//			if (mContext instanceof MyActivity) {
+//				((MyActivity) mContext).validatCartIcon();// 更新页面购物车数据。
+//			}
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "DB_CartTable -->> delCart" );
+		}
+		DB_CartTable.delCart(id, mContext);
+	}
+	//--------------------------ok
+	/**
+	 * 
+	 * @Description: 删除所有购物车记录(套装)
+	 */
+	public void delAllPacksCart() {
+//		try {
+//
+//			openDatabase();
+//			String whereClause = "1=1";
+//			db.delete(PacksTable.TB_PACKS_TABLE, whereClause, null);
+//			((MyActivity) mContext).validatCartIcon();// 更新页面购物车数据。
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//
+//		} finally {
+//			// db.close();
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "DB_PacksTable -->> delAllPacksCart" );
+		}
+		DB_PacksTable.delAllPacksCart(mContext);
+	}
+	//--------------------------ok
+	/**
+	 * 
+	 * @Description: 删除所有购物车记录
+	 */
+	public void delAllCart() {
+//		try {
+//
+//			openDatabase();
+//			String whereClause = "1=1";
+//			db.delete(CartTable.TB_CART_TABLE, whereClause, null);
+//			if (mContext instanceof MyActivity) {
+//				((MyActivity) mContext).validatCartIcon();// 更新页面购物车数据。
+//			}
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "DB_CartTable -->> delAllCart" );
+		}
+		DB_CartTable.delAllCart(mContext);
+	}
+
+	//--------------------------ok
+	/**
+	 * 
+	 * @Description: 删除所有购物车记录(套装)
+	 */
+	public void delAllPacksCartNoListener() {
+//		try {
+//			openDatabase();
+//			String whereClause = "1=1";
+//			db.delete(PacksTable.TB_PACKS_TABLE, whereClause, null);
+//		} finally {
+//			// db.close();
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "DB_PacksTable -->> delAllPacksCartNoListener" );
+		}
+		DB_PacksTable.delAllPacksCartNoListener();
+	}
+
+	//------------------------ok
+	/**
+	 * 
+	 * @Description: 删除所有购物车记录
+	 */
+	public void delAllCartNoListener() {
+//		try {
+//			openDatabase();
+//			String whereClause = "1=1";
+//			db.delete(CartTable.TB_CART_TABLE, whereClause, null);
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "DB_CartTable -->> delAllCartNoListener" );
+		}
+		DB_CartTable.delAllCartNoListener();
+	}
+	//-------------------------ok
+	/**
+	 * 
+	 * @Description: 删除所有浏览历史记录
+	 */
+	public void delAllHistory() {
+//		try {
+//			openDatabase();
+//			String whereClause = "1=1";
+//			db.delete(History.TB_HISTORY_TABLE, whereClause, null);
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "HistoryTable -->> delAllHistory" );
+		}
+		HistoryTable.delAllHistory();
+	}
+	//---------------------------ok
+	/**
+	 * 
+	 * @Description: 删除所有收藏记录
+	 */
+	public void delAllFavority() {
+//		try {
+//			openDatabase();
+//			String whereClause = "1=1";
+//			db.delete(Favority.TB_FAVORITY_TABLE, whereClause, null);
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "FavorityTable -->> delAllFavority" );
+		}
+		FavorityTable.delAllFavority();
+	}
+	//--------------------ok
+	/**
+	 * insert 一条历史记录
+	 * 
+	 * @param productId
+	 *            商品ID
+	 * @return 是否收藏
+	 */
+	public boolean queryIsFavorited(long productId) {
+//		try {
+//			openDatabase();
+//			String whereArgs = Favority.TB_CLOUMN_PRODUCT_CODE + " =?" + " and " + Favority.TB_CLOUMN_USER_NAME + " =?";
+//			String[] whereValue = { productId + "", LoginUser.getLoginUserName() };
+//
+//			c = db.query(Favority.TB_FAVORITY_TABLE, null, whereArgs, whereValue, null, null, null);
+//
+//			if (c != null && c.getCount() != 0) {
+//				return true;
+//			} else {
+//				return false;
+//			}
+//		} finally {
+//			if (c != null) {
+//				c.close();
+//			}
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "FavorityTable -->> queryIsFavorited" );
+		}
+		return FavorityTable.queryIsFavorited(productId);
+
+	}
+	//----------------------ok
+	/**
+	 * 更新 or 删除 or 新增 一条收藏记录
+	 * 
+	 * @param prodoctID
+	 *            商品号
+	 * @param productName
+	 *            商品名
+	 * @param delFlag
+	 *            是否是取消收藏
+	 * @return
+	 */
+	public void insertOrUpdateFavority(long prodoctID, String productName, boolean delFlag) {
+//		try {
+//			openDatabase();
+//			ContentValues contentValues = new ContentValues();
+//			String whereArgs = Favority.TB_CLOUMN_PRODUCT_CODE + " =?";
+//			String[] whereValue = { prodoctID + "" };
+//			contentValues.put(Favority.TB_CLOUMN_USER_NAME, LoginUser.getLoginUserName());
+//			if (delFlag) {// 是否取消收藏
+//				db.delete(Favority.TB_FAVORITY_TABLE, whereArgs, whereValue);// 删除收藏记录
+//				return;
+//			}
+//			c = db.query(Favority.TB_FAVORITY_TABLE, null, whereArgs, whereValue, null, null, null);
+//			if (c != null && c.getCount() != 0) {// 更新操作
+//				contentValues.put(Favority.TB_CLOUMN_BROWSE_TIME, FormatUtils.formatDate(new Date()));
+//				db.update(Favority.TB_FAVORITY_TABLE, contentValues, whereArgs, whereValue);
+//			} else {// 新增操作
+//
+//				contentValues.put(Favority.TB_CLOUMN_PRODUCT_CODE, prodoctID);
+//				contentValues.put(Favority.TB_CLOUMN_PRODUCT_NAME, productName);
+//				db.insert(Favority.TB_FAVORITY_TABLE, null, contentValues);
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		} finally {
+//			if (c != null) {
+//				c.close();
+//			}
+//
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "FavorityTable -->> insertOrUpdateFavority" );
+		}
+		FavorityTable.insertOrUpdateFavority(prodoctID, productName, delFlag);
+
+	}
+	//---------------------------ok
+	/**
+	 * 查询购物车记录表
+	 * 
+	 * @param pageNum
+	 *            第几页
+	 * @param perlMax
+	 *            每页多少个
+	 * @return
+	 */
+	public ArrayList<CartTable> getCartList() {
+//		CartTable cart;
+//		ArrayList<CartTable> list = new ArrayList<CartTable>();
+//		// Cursor c = null;
+//		// SQLiteDatabase db = getDatabase();
+//		try {
+//			// Cursor c;
+//			openDatabase();
+//
+//			// String sql =
+//			// "SELECT _id,name,phone FROM "+CartTable.TB_CART_TABLE+
+//			// " LIMIT ?,?";
+//			String[] columns = { CartTable.TB_CLOUMN_PRODUCT_CODE, CartTable.TB_CLOUMN_PRODUCT_NAME, CartTable.TB_CLOUMN_BUY_COUNT };
+//			c = db.query(CartTable.TB_CART_TABLE, columns, null, null, null, null, null);
+//			c.moveToFirst();
+//
+//			if (c != null && c.getCount() != 0) {
+//				final int length = c.getCount();
+//				for (int i = 0; i < length; i++) {
+//					c.moveToPosition(i);
+//					cart = new CartTable();
+//					cart.productCode = c.getLong(c.getColumnIndex(CartTable.TB_CLOUMN_PRODUCT_CODE));
+//					cart.name = c.getString(c.getColumnIndexOrThrow(CartTable.TB_CLOUMN_PRODUCT_NAME));
+//					cart.buyCount = c.getShort(c.getColumnIndexOrThrow(CartTable.TB_CLOUMN_BUY_COUNT));
+//					list.add(cart);
+//				}
+//			}
+//		} finally {
+//			if (c != null) {
+//				c.close();
+//			}
+//			// db.close();
+//			DBHelperUtil.closeDatabase();
+//		}
+//
+//		return list;
+		if (Log.D) {
+			Log.d(TAG, "DB_CartTable -->> getCartList" );
+		}
+		return DB_CartTable.getCartList();
+	}
+	//--------------------ok
+	/**
+	 * 获取购物车记录表(套装)
+	 * 
+	 * @param pageNum
+	 *            第几页
+	 * @param perlMax
+	 *            每页多少个
+	 * @return
+	 */
+	public ArrayList<PacksTable> getPacksList() {
+//		PacksTable cart;
+//		ArrayList<PacksTable> list = new ArrayList<PacksTable>();
+//		// Cursor c = null;
+//		openDatabase();
+//		// SQLiteDatabase db = getDatabase();
+//		try {
+//
+//			// String sql =
+//			// "SELECT _id,name,phone FROM "+CartTable.TB_CART_TABLE+
+//			// " LIMIT ?,?";
+//			String[] columns = { PacksTable.TB_COLOUMN_PACK_ID, PacksTable.TB_COLOUMN_PRODUCT_NAME, PacksTable.TB_COLOUMN_BUY_COUNT, PacksTable.TB_COLOUMN_CHILD_COUNT };
+//			c = db.query(PacksTable.TB_PACKS_TABLE, columns, null, null, null, null, null);
+//			c.moveToFirst();
+//
+//			if (c != null && c.getCount() != 0) {
+//				final int length = c.getCount();
+//				for (int i = 0; i < length; i++) {
+//					c.moveToPosition(i);
+//					cart = new PacksTable();
+//					cart.packId = c.getLong(c.getColumnIndex(PacksTable.TB_COLOUMN_PACK_ID));
+//					cart.name = c.getString(c.getColumnIndexOrThrow(PacksTable.TB_COLOUMN_PRODUCT_NAME));
+//					cart.buyCount = c.getShort(c.getColumnIndexOrThrow(PacksTable.TB_COLOUMN_BUY_COUNT));
+//					cart.childCount = c.getInt(c.getColumnIndex(PacksTable.TB_COLOUMN_CHILD_COUNT));
+//					list.add(cart);
+//				}
+//			}
+//		} finally {
+//			if (c != null) {
+//				c.close();
+//			}
+//			// db.close();
+//			DBHelperUtil.closeDatabase();
+//		}
+
+//		return list;
+		if (Log.D) {
+			Log.d(TAG, "DB_PacksTable -->> getPacksList" );
+		}
+		return DB_PacksTable.getPacksList();
+	}
+	//-----------------------ok
+	/**
+	 * 根据产品ID查询购物车记录表
+	 * 
+	 * @return
+	 */
+	public synchronized CartTable queryCartByProductId(long productId) {
+//		CartTable cart = null;
+//		try {
+//			openDatabase();
+//
+//			String whereArgs = CartTable.TB_CLOUMN_PRODUCT_CODE + " =?";
+//			String[] whereValue = { productId + "" };
+//
+//			String[] columns = { CartTable.TB_CLOUMN_PRODUCT_CODE, CartTable.TB_CLOUMN_PRODUCT_NAME, CartTable.TB_CLOUMN_BUY_COUNT };
+//			c = db.query(CartTable.TB_CART_TABLE, columns, whereArgs, whereValue, null, null, null);
+//			c.moveToFirst();
+//			if (c != null && c.getCount() != 0) {
+//				c.moveToPosition(0);
+//				cart = new CartTable();
+//				cart.productCode = c.getLong(c.getColumnIndex(CartTable.TB_CLOUMN_PRODUCT_CODE));
+//				cart.name = c.getString(c.getColumnIndexOrThrow(CartTable.TB_CLOUMN_PRODUCT_NAME));
+//				cart.buyCount = c.getShort(c.getColumnIndexOrThrow(CartTable.TB_CLOUMN_BUY_COUNT));
+//			}
+//		} finally {
+//			if (c != null) {
+//				c.close();
+//			}
+//			// db.close();
+//			DBHelperUtil.closeDatabase();
+//		}
+//
+//		return cart;
+		if (Log.D) {
+			Log.d(TAG, "DB_CartTable -->> queryCartByProductId" );
+		}
+		return DB_CartTable.queryCartByProductId(productId);
+	}
+	//------------------ok
+	/**
+	 * 根据产品ID查询购物车记录表(套装查询)
+	 * 
+	 * @return
+	 */
+	public PacksTable queryCartByPacksId(long productId) {
+//		PacksTable cart = null;
+//
+//		try {
+//			openDatabase();
+//
+//			String whereArgs = PacksTable.TB_COLOUMN_PACK_ID + " =?";
+//			String[] whereValue = { productId + "" };
+//
+//			String[] columns = { PacksTable.TB_COLOUMN_PACK_ID, PacksTable.TB_COLOUMN_PRODUCT_NAME, PacksTable.TB_COLOUMN_BUY_COUNT, PacksTable.TB_COLOUMN_CHILD_COUNT };
+//			c = db.query(PacksTable.TB_PACKS_TABLE, columns, whereArgs, whereValue, null, null, null);
+//			c.moveToFirst();
+//
+//			if (c != null && c.getCount() != 0) {
+//				c.moveToPosition(0);
+//				cart = new PacksTable();
+//				cart.packId = c.getLong(c.getColumnIndex(PacksTable.TB_COLOUMN_PACK_ID));
+//				cart.name = c.getString(c.getColumnIndexOrThrow(PacksTable.TB_COLOUMN_PRODUCT_NAME));
+//				cart.buyCount = c.getShort(c.getColumnIndexOrThrow(PacksTable.TB_COLOUMN_BUY_COUNT));
+//				cart.childCount = c.getInt(c.getColumnIndex(PacksTable.TB_COLOUMN_CHILD_COUNT));
+//
+//			}
+//		} finally {
+//			if (c != null) {
+//				c.close();
+//			}
+//			// db.close();
+//			DBHelperUtil.closeDatabase();
+//		}
+//
+//		return cart;
+		if (Log.D) {
+			Log.d(TAG, "DB_PacksTable -->> queryCartByPacksId" );
+		}
+		return DB_PacksTable.queryCartByPacksId(productId);
+	}
+	//----------------------------ok
+	public void insertCommAddr(String user_name, String mobile, String province, String city, String area, String where, String zip, String mail, int provincecode, int citycode, int areacode) {
+//		try {
+//			openDatabase();
+//			ContentValues contentValues = new ContentValues();
+//			contentValues.put(CommAddr.TB_COLUMN_USER_NAME, user_name);
+//			contentValues.put(CommAddr.TB_COLUMN_MOBILE, mobile);
+//			contentValues.put(CommAddr.TB_COLUMN_PROVINCE, province);
+//			contentValues.put(CommAddr.TB_COLUMN_CITY, city);
+//			contentValues.put(CommAddr.TB_COLUMN_AREA, area);
+//			contentValues.put(CommAddr.TB_COLUMN_WHERE, where);
+//			contentValues.put(CommAddr.TB_COLUMN_ZIP, zip);
+//			contentValues.put(CommAddr.TB_COLUMN_MAIL, mail);
+//			contentValues.put(CommAddr.TB_COLUMN_PROVINCE_CODE, provincecode);
+//			contentValues.put(CommAddr.TB_COLUMN_CITY_CODE, citycode);
+//			contentValues.put(CommAddr.TB_COLUMN_AREA_CODE, areacode);
+//			db.insert(CommAddr.COMMON_ADDR_TABLE_NAME, null, contentValues);
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//			// db.close();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "CommAddrTable -->> insertCommAddr" );
+		}
+		CommAddrTable.insertCommAddr(user_name, mobile, province, city, area, where, zip, mail, provincecode, citycode, areacode);
+	}
+	
+	//-------------------ok
+	public void delCommAddr(int id) {
+//		try {
+//
+//			openDatabase();
+//			ContentValues contentValues = new ContentValues();
+//			contentValues.put("id", id);
+//			String whereArgs = "id =?";
+//			String[] whereValue = { id + "" };
+//			db.delete(CommAddr.COMMON_ADDR_TABLE_NAME, whereArgs, whereValue);
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//			// db.close();
+//
+//		}
+		if (Log.D) {
+			Log.d(TAG, "CommAddrTable -->> delCommAddr" );
+		}
+		CommAddrTable.delCommAddr(id);
+	}
+
+	// + CommAddr.TB_COLUMN_USER_NAME + " TEXT,"
+	// + CommAddr.TB_COLUMN_MOBILE + " TEXT,"
+	// + CommAddr.TB_COLUMN_PROVINCE + " TEXT,"
+	// + CommAddr.TB_COLUMN_CITY + " TEXT,"
+	// + CommAddr.TB_COLUMN_AREA + " TEXT,"
+	// + CommAddr.TB_COLUMN_WHERE + " TEXT,"
+	// + CommAddr.TB_COLUMN_ZIP + " TEXT,"
+	// + CommAddr.TB_COLUMN_MAIL + " TEXT)";
+	//---------------------ok
+	public ArrayList<CommAddr> getCommAddrList() {
+//		CommAddr addr;
+//		ArrayList<CommAddr> list = new ArrayList<CommAddr>();
+//		try {
+//			// Cursor c;
+//			openDatabase();
+//			// String sql =
+//			// "SELECT _id,name,phone FROM "+CartTable.TB_CART_TABLE+
+//			// " LIMIT ?,?";
+//			String[] columns = { CommAddr.TB_COLUMN_USER_NAME, CommAddr.TB_COLUMN_MOBILE, CommAddr.TB_COLUMN_PROVINCE, CommAddr.TB_COLUMN_CITY, CommAddr.TB_COLUMN_AREA, CommAddr.TB_COLUMN_WHERE, CommAddr.TB_COLUMN_ZIP, CommAddr.TB_COLUMN_MAIL, CommAddr.TB_COLUMN_PROVINCE_CODE, CommAddr.TB_COLUMN_CITY_CODE, CommAddr.TB_COLUMN_AREA_CODE };
+//			c = db.query(CommAddr.COMMON_ADDR_TABLE_NAME, columns, null, null, null, null, null);
+//			c.moveToFirst();
+//			if (c != null && c.getCount() != 0) {
+//				final int length = c.getCount();
+//				for (int i = 0; i < length; i++) {
+//					c.moveToPosition(i);
+//					addr = new CommAddr();
+//					addr.sUser_name = c.getString(c.getColumnIndex(CommAddr.TB_COLUMN_USER_NAME));
+//					addr.sMobile = c.getString(c.getColumnIndex(CommAddr.TB_COLUMN_MOBILE));
+//					addr.sProvince = c.getString(c.getColumnIndex(CommAddr.TB_COLUMN_PROVINCE));
+//					addr.sCity = c.getString(c.getColumnIndex(CommAddr.TB_COLUMN_CITY));
+//					addr.sArea = c.getString(c.getColumnIndex(CommAddr.TB_COLUMN_AREA));
+//					addr.sWhere = c.getString(c.getColumnIndex(CommAddr.TB_COLUMN_WHERE));
+//					addr.sZip = c.getString(c.getColumnIndex(CommAddr.TB_COLUMN_ZIP));
+//					addr.sMail = c.getString(c.getColumnIndex(CommAddr.TB_COLUMN_MAIL));
+//					addr.province_code = c.getInt(c.getColumnIndex(CommAddr.TB_COLUMN_PROVINCE_CODE));
+//					addr.city_code = c.getInt(c.getColumnIndex(CommAddr.TB_COLUMN_CITY_CODE));
+//					addr.area_code = c.getInt(c.getColumnIndex(CommAddr.TB_COLUMN_AREA_CODE));
+//					list.add(addr);
+//				}
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		} finally {
+//			if (c != null && !c.isClosed()) {
+//				c.close();
+//			}
+//			DBHelperUtil.closeDatabase();
+//			// db.close();
+//		}
+//
+//		return list;
+		if (Log.D) {
+			Log.d(TAG, "CommAddrTable -->> getCommAddrList" );
+		}
+		return CommAddrTable.getCommAddrList();
+	}
+	//----------ok
+	/**
+	 * 插入or update条码扫描记录
+	 * 
+	 * @param barcode
+	 */
+	public void insertOrUpdateBarcodeRecord(BarcodeRecord barcode) {
+//		try {
+//			openDatabase();
+//			ContentValues contentValues = new ContentValues();
+//			contentValues.put(ScanCode.TB_COLUMN_CODE, barcode.getContent());
+//			contentValues.put(ScanCode.TB_COLUMN_PRODUCT_NAME, barcode.getProductName());
+//			String selection = ScanCode.TB_COLUMN_CODE + "=?";
+//			String[] selectionArgs = new String[] { barcode.getContent() };
+//			c = db.query(ScanCode.TABLE_NAME, null, selection, selectionArgs, null, null, null);
+//			if (c != null && c.getCount() > 0) {
+//				db.update(ScanCode.TABLE_NAME, contentValues, selection, selectionArgs);
+//			} else {
+//				db.insert(ScanCode.TABLE_NAME, null, contentValues);
+//			}
+//
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//			// db.close();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "ScanCodeTable -->> insertOrUpdateBarcodeRecord" );
+		}
+		ScanCodeTable.insertOrUpdateBarcodeRecord(barcode);
+
+	}
+	//----------ok
+	/**
+	 * 
+	 * @Description: 删除所有条码扫描记录
+	 */
+	public void delAllBarcodeRecord() {
+//		try {
+//
+//			openDatabase();
+//			String whereClause = "1=1";
+//			db.delete(ScanCode.TABLE_NAME, whereClause, null);
+//
+//			if (mContext instanceof MyActivity) {
+//				((MyActivity) mContext).validatCartIcon();// 更新页面购物车数据。
+//			}
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//			// db.close();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "ScanCodeTable -->> delAllBarcodeRecord" );
+		}
+		ScanCodeTable.delAllBarcodeRecord(mContext);
+	}
+	//---------ok
+	/**
+	 * 
+	 * @Description: 删除一条码扫描记录
+	 */
+	public void delBarcodeRecord(BarcodeRecord barcode) {
+//		try {
+//
+//			openDatabase();
+//			String whereClause = ScanCode.TB_COLUMN_CODE + "=?";
+//			db.delete(ScanCode.TABLE_NAME, whereClause, new String[] { barcode.getContent() });
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		} finally {
+//			DBHelperUtil.closeDatabase();
+//		}
+		if (Log.D) {
+			Log.d(TAG, "ScanCodeTable -->> delBarcodeRecord" );
+		}
+		ScanCodeTable.delBarcodeRecord(barcode);
+	}
+	//---------ok
+	public ArrayList<BarcodeRecord> getBarcodeRecordList() {
+//		BarcodeRecord barcode;
+//		ArrayList<BarcodeRecord> list = new ArrayList<BarcodeRecord>();
+//		ArrayList<String> detList = new ArrayList<String>();
+//		try {
+//			// Cursor c;
+//			openDatabase();
+//			// String sql =
+//			// "SELECT _id,name,phone FROM "+CartTable.TB_CART_TABLE+
+//			// " LIMIT ?,?";
+//			String[] columns = { "id", ScanCode.TB_COLUMN_CODE, ScanCode.TB_COLUMN_PRODUCT_NAME };
+//			c = db.query(ScanCode.TABLE_NAME, columns, null, null, null, null, ScanCode.TB_COLUMN_CREATE_TIME);
+//			c.moveToFirst();
+//
+//			if (c != null && c.getCount() != 0) {
+//				final int length = c.getCount();
+//				for (int i = length - 1; i >= 0; i--) {
+//					c.moveToPosition(i);
+//					if (i < length - 50) {
+//						detList.add("" + c.getInt(c.getColumnIndex("id")));
+//						continue;
+//					}
+//
+//					barcode = new BarcodeRecord();
+//					barcode.setContent(c.getString(c.getColumnIndex(ScanCode.TB_COLUMN_CODE)));
+//					barcode.setProductName(c.getString(c.getColumnIndex(ScanCode.TB_COLUMN_PRODUCT_NAME)));
+//					list.add(barcode);
+//				}
+//			}
+//
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		} finally {
+//			if (c != null && !c.isClosed()) {
+//				c.close();
+//			}
+//			for (String detId : detList) {
+//				String[] queryWhere = { detId };
+//				db.delete(ScanCode.TABLE_NAME, "id=?", queryWhere);
+//			}
+//			DBHelperUtil.closeDatabase();
+//		}
+//
+//		return list;
+		if (Log.D) {
+			Log.d(TAG, "ScanCodeTable -->> getBarcodeRecordList" );
+		}
+		return ScanCodeTable.getBarcodeRecordList();
+	}
+
+}
+
+class OpenHelper extends SQLiteOpenHelper {
+
+	public OpenHelper(Context context, String name, CursorFactory factory, int version) {
+		super(context, name, factory, version);
+	}
+
+	@Override
+	public void onCreate(SQLiteDatabase db) {
+
+//		final String CREATE_TABLE_HISTORY = "CREATE TABLE "//
+//				+ History.TB_HISTORY_TABLE//
+//				+ "('id' INTEGER PRIMARY KEY  NOT NULL ,"//
+//				+ History.TB_CLOUMN_PRODUCT_NAME + " TEXT,"//
+//				+ History.TB_CLOUMN_PRODUCT_CODE + " LONG,"//
+//				+ History.TB_CLOUMN_USER_NAME + " TEXT,"//
+//				+ History.TB_CLOUMN_BROWSE_TIME//
+//				+ " DATETIME DEFAULT CURRENT_TIMESTAMP)";
+//		db.execSQL(CREATE_TABLE_HISTORY);
+		
+
+//		final String CREATE_TABLE_CART = "CREATE TABLE "//
+//				+ CartTable.TB_CART_TABLE//
+//				+ "('id' INTEGER PRIMARY KEY  NOT NULL ,"//
+//				+ CartTable.TB_CLOUMN_PRODUCT_NAME + " TEXT,"//
+//				+ CartTable.TB_CLOUMN_PRODUCT_CODE + " LONG,"//
+//				+ CartTable.TB_CLOUMN_BUY_COUNT//
+//				+ " 'browseTime' DATETIME DEFAULT CURRENT_TIMESTAMP)";
+//		db.execSQL(CREATE_TABLE_CART);
+		
+
+//		final String CREATE_TABLE_PACKS = "CREATE TABLE " + PacksTable.TB_PACKS_TABLE + "('id' INTEGER PRIMARY KEY  NOT NULL ," + PacksTable.TB_COLOUMN_PACK_ID + " LONG," + PacksTable.TB_COLOUMN_PRODUCT_NAME + " TEXT," + PacksTable.TB_COLOUMN_BUY_COUNT + " INTEGER," + PacksTable.TB_COLOUMN_CHILD_COUNT + " INTEGER," + " 'browseTime' DATETIME DEFAULT CURRENT_TIMESTAMP)";
+//		db.execSQL(CREATE_TABLE_PACKS);
+		
+
+//		final String CREATE_TABLE_FAVORITY = "CREATE TABLE "//
+//				+ Favority.TB_FAVORITY_TABLE//
+//				+ "('id' INTEGER PRIMARY KEY  NOT NULL ,"//
+//				+ Favority.TB_CLOUMN_PRODUCT_NAME + " TEXT,"//
+//				+ Favority.TB_CLOUMN_PRODUCT_CODE + " LONG,"//
+//				+ Favority.TB_CLOUMN_USER_NAME + " TEXT,"//
+//				+ "'browseTime' DATETIME DEFAULT CURRENT_TIMESTAMP)";
+//		db.execSQL(CREATE_TABLE_FAVORITY);
+		
+
+//		final String CREATE_TABLE_COMM_ADDR = "CREATE TABLE "//
+//				+ CommAddr.COMMON_ADDR_TABLE_NAME//
+//				+ "('id' INTEGER PRIMARY KEY  NOT NULL ,"//
+//				+ CommAddr.TB_COLUMN_USER_NAME + " TEXT,"//
+//				+ CommAddr.TB_COLUMN_MOBILE + " TEXT,"//
+//				+ CommAddr.TB_COLUMN_PROVINCE + " TEXT,"//
+//				+ CommAddr.TB_COLUMN_CITY + " TEXT,"//
+//				+ CommAddr.TB_COLUMN_AREA + " TEXT,"//
+//				+ CommAddr.TB_COLUMN_WHERE + " TEXT,"//
+//				+ CommAddr.TB_COLUMN_ZIP + " TEXT,"//
+//				+ CommAddr.TB_COLUMN_MAIL + " TEXT,"//
+//				+ CommAddr.TB_COLUMN_PROVINCE_CODE + " INTEGER,"//
+//				+ CommAddr.TB_COLUMN_CITY_CODE + " INTEGER,"//
+//				+ CommAddr.TB_COLUMN_AREA_CODE + " INTEGER)";
+//		db.execSQL(CREATE_TABLE_COMM_ADDR);
+		
+
+//		final String CREATE_TABLE_SCAN_CODE = "CREATE TABLE "//
+//				+ ScanCode.TABLE_NAME//
+//				+ "('id' INTEGER PRIMARY KEY  NOT NULL ,"//
+//				+ ScanCode.TB_COLUMN_CODE + " TEXT,"//
+//				+ ScanCode.TB_COLUMN_PRODUCT_NAME + " TEXT,"//
+//				+ ScanCode.TB_COLUMN_CREATE_TIME + " DATETIME DEFAULT CURRENT_TIMESTAMP)";
+//		db.execSQL(CREATE_TABLE_SCAN_CODE);
+		
+		HistoryTable.create(db);
+		DB_CartTable.create(db);
+		DB_PacksTable.create(db);
+		FavorityTable.create(db);
+		CommAddrTable.create(db);
+		ScanCodeTable.create(db);
+		// 缓存文件
+		CacheFileTable.create(db);
+		SearchHistoryTable.create(db);
+		UnExcuteFunctionTable.create(db);
+		PushMessageTable.create(db);
+		
+	}
+
+	@Override
+	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+		if (oldVersion < newVersion) {
+			if (Log.I) {
+				Log.i("onUpgrade", "++++++++++oldVersion:" + oldVersion + "newVersion:" + newVersion);
+			}
+			//db.execSQL("drop table if exists " + History.TB_HISTORY_TABLE);
+			//db.execSQL("drop table if exists " + CartTable.TB_CART_TABLE);
+			//db.execSQL("drop table if exists " + PacksTable.TB_PACKS_TABLE);
+			//db.execSQL("drop table if exists " + Favority.TB_FAVORITY_TABLE);
+			//db.execSQL("drop table if exists " + CommAddr.COMMON_ADDR_TABLE_NAME);
+			//db.execSQL("drop table if exists " + ScanCode.TABLE_NAME);
+
+			// 缓存文件
+			CacheFileTable.upgrade(db, oldVersion, newVersion);
+			HistoryTable.upgrade(db);
+			DB_CartTable.upgrade(db);
+			DB_PacksTable.upgrade(db);
+			FavorityTable.upgrade(db);
+			CommAddrTable.upgrade(db);
+			ScanCodeTable.upgrade(db);
+			SearchHistoryTable.upgrade(db);
+			PushMessageTable.upgrade(db);
+			UnExcuteFunctionTable.upgrade(db);
+			onCreate(db);
+		}
+	}
+
+}

@@ -1,0 +1,24 @@
+package com.jingdong.app.mall.utils; 
+/** 
+ * @author:   
+ * Time：2012-5-25 下午05:29:07 
+ * Name： 韩旭东
+ * Description: 转换工具类
+ */
+public class ContentConvertUtil {
+	
+	/**
+	 * Convert string to byte[]
+	 * 
+	 * @param s
+	 * @return
+	 */
+	public static byte[] toByteArray(String s) {
+        byte[] buf = new byte[s.length() / 2];
+        int j = 0;
+        for (int i = 0; i < buf.length; i++) {
+            buf[i] = (byte) ((Character.digit(s.charAt(j++), 16) << 4) | Character.digit(s.charAt(j++), 16));
+        }
+        return buf;
+    }
+}

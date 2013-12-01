@@ -1,0 +1,280 @@
+package com.jingdong.app.mall.secure;
+
+import java.io.IOException;
+import java.util.Random;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import com.jingdong.app.mall.utils.HttpGroup;
+import com.jingdong.app.mall.utils.JSONObjectProxy;
+import com.jingdong.app.mall.utils.Log;
+import com.jingdong.app.mall.utils.HttpGroup.HttpError;
+import com.jingdong.app.mall.utils.HttpGroup.HttpResponse;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSetting;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSettingParams;
+
+public class SecureNetwork {
+
+	private final static String TAG = "HttpNetWork";
+	/**
+	 * @Fields instance : 通讯加密对象
+	 */
+	private static SecureNetwork instance = new SecureNetwork();
+	/**
+	 * @Fields httpGroup : 网络连接
+	 */
+	private HttpGroup httpGroup;
+
+	/**
+	 * @Fields mPublicKey : 获取公钥
+	 */
+	public String mPublicKey;
+	/**
+	 * @Fields mSessionKey : 获取sessionkey
+	 */
+	public String mSessionKey;
+	/**
+	 * @Fields mRandomKey : 客户端生成的随机数
+	 */
+	public String mRandomKey;
+	/**
+	 * @Fields mTrueKey : 加密解密key
+	 */
+	public String mTrueKey;
+
+	private static final int STATE_NONE = 1;// 原始状态
+	private static final int STATE_FAILED = 3;// 失败
+	private static final int STATE_SUCCEED = 2;// 成功
+	private static final int STATE_DOING = 0;// 进行中
+
+	/**
+	 * 当前加密通讯准备工作的状态
+	 */
+	private int mState = STATE_NONE;
+
+	/**
+	 * 准备工作 force：是否即使状态是成功，仍然强制重新获取key wait：是否有必要让当前线程等待过程执行完毕
+	 */
+	public static void doPreparation(boolean force, boolean wait) {
+		instance.doKey(force, wait);
+	}
+
+	/**
+	 * 获取加密、解密的key force：是否必须得到值，不允许为空，即使需要等待
+	 */
+	public static String getTrueKey(boolean force) {
+		return instance.doTrueKey(force);
+	}
+
+	/**
+	 * 构造方法
+	 */
+	private SecureNetwork() {
+		// 初始化 httpGroup
+		if (null == httpGroup) {
+			HttpGroup.HttpGroupSetting httpGroupSetting = new HttpGroup.HttpGroupSetting();
+			httpGroupSetting.setType(HttpGroup.HttpGroupSetting.TYPE_JSON);
+			httpGroup = new HttpGroup.HttpGroupaAsynPool(httpGroupSetting);
+		}
+	}
+
+	/**
+	 * 任何中途出错或者成功，只要结束了一定要调用此方法
+	 */
+	private synchronized void complete(int state) {
+		mState = state;
+		notifyAll();
+	}
+
+	/**
+	 * 准备各种Key
+	 */
+	private synchronized void doKey(boolean force, boolean wait) {
+		if (!force && mState == STATE_SUCCEED) {// 如果非强制，而且当前状态已经是成功则什么都不做
+			return;
+		}
+		if (mState != STATE_DOING) {
+			// 把标志位改为进行中
+			mState = STATE_DOING;
+			loadPublicKey();
+		}
+		
+		if (wait) {
+			try {
+				if (Log.D) {
+					Log.d(TAG, "SecureNetwork wait start -->> ");
+				}
+				wait();
+				if (Log.D) {
+					Log.d(TAG, "SecureNetwork wait end -->> ");
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	/**
+	 * 发起publicKey的网络请求
+	 */
+	private void loadPublicKey() {
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setNeedGlobalInitialization(false);
+		httpSetting.setTopPriority(true);
+		httpSetting.setListener(publicKeyLoadListener);
+		httpSetting.setFunctionId("loginTalk");
+		httpGroup.add(httpSetting);
+	}
+
+	/**
+	 * 发起sessionKey的网络请求
+	 */
+	private void loadSessionKey() {
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setNeedGlobalInitialization(false);
+		httpSetting.setTopPriority(true);
+		httpSetting.setFunctionId("security");
+		httpSetting.setListener(sessionKeyLoadListener);
+		httpGroup.add(httpSetting);
+	}
+
+	/**
+	 * 获取加密、解密的key force：是否必须得到值，不允许为空，即使需要等待
+	 */
+	private synchronized String doTrueKey(boolean force) {
+		if (mState == STATE_SUCCEED && null != mTrueKey) {
+			if (Log.D) {
+				Log.d(TAG, "SecureNetwork getTrueKey() mTrueKey -->> " + mTrueKey);
+			}
+			return mTrueKey;
+		} else if (!force) {
+			if (Log.D) {
+				Log.d(TAG, "SecureNetwork getTrueKey() mTrueKey -->> null");
+			}
+			return null;
+		} else {
+			doPreparation(false, true);
+			if (Log.D) {
+				Log.d(TAG, "SecureNetwork getTrueKey() after doPreparation mTrueKey -->> " + mTrueKey);
+			}
+			return mTrueKey;
+		}
+	}
+
+	/**
+	 * @Title: encryptionKeyData
+	 * @Description: 设置加密key的数据
+	 * @param @return
+	 * @param @throws JSONException
+	 * @return JSONObject
+	 * @throws
+	 */
+	public String encryptionKeyData() throws JSONException {
+		String eKey = "";
+		mRandomKey = getRandomNumber();
+		RSAHelper.init(mPublicKey);
+		JSONObject randomJSON = new JSONObject();
+		randomJSON.put("envelopeKey", mRandomKey);
+		String encryptionKey = randomJSON.toString();
+		try {
+			eKey = RSAHelper.encryptBySeg(encryptionKey.getBytes());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return eKey;
+	}
+
+	/**
+	 * @Title: getRandomNumber
+	 * @Description: 获取随机数
+	 * @param
+	 * @return String
+	 * @throws
+	 */
+	private String getRandomNumber() {
+		StringBuffer str = new StringBuffer();
+		Random random = new Random();
+		for (int i = 0; i < 8; i++) {
+			int randomNumber = (Math.abs(random.nextInt()) % 10);
+			str.append(randomNumber);
+		}
+
+		return str.toString();
+	}
+
+	/**
+	 * publicKey加载监听器
+	 */
+	HttpGroup.OnCommonListener publicKeyLoadListener = new HttpGroup.OnCommonListener() {
+
+		@Override
+		public void onReady(HttpSettingParams httpSettingParams) {
+		}
+
+		@Override
+		public void onError(HttpError error) {
+			complete(STATE_FAILED);
+		}
+
+		@Override
+		public void onEnd(HttpResponse httpResponse) {
+			JSONObjectProxy jsonObject = httpResponse.getJSONObject();
+			mPublicKey = jsonObject.getStringOrNull("pubKey");
+			if (Log.D) {
+				Log.d(TAG, "SecureNetwork mPublicKey -->> " + mPublicKey);
+			}
+			loadSessionKey();
+		}
+	};
+
+	/**
+	 * sessionKey加载监听器
+	 */
+	HttpGroup.OnCommonListener sessionKeyLoadListener = new HttpGroup.OnCommonListener() {
+
+		@Override
+		public void onReady(HttpSettingParams httpSettingParams) {
+			try {
+				httpSettingParams.putJsonParam("loginInfo", encryptionKeyData());
+			} catch (JSONException e) {
+				if(Log.D){
+					e.printStackTrace();
+					Log.d(TAG, " -->> " + e.getMessage());
+				}
+				
+				// 失败,不发请求了，直接error
+				httpSettingParams.setReady(false);
+			}
+		}
+
+		@Override
+		public void onError(HttpError error) {
+			complete(STATE_FAILED);
+		}
+
+		@Override
+		public void onEnd(HttpResponse httpResponse) {
+			JSONObjectProxy jsonObject = httpResponse.getJSONObject();
+			mSessionKey = jsonObject.getStringOrNull("sessionKey");
+			if (null == mSessionKey) {
+				complete(STATE_FAILED);
+				return;
+			}
+			if (Log.D) {
+				Log.d(TAG, "SecureNetwork mSessionKey -->> " + mSessionKey);
+				Log.d(TAG, "SecureNetwork mRandomKey -->> " + mRandomKey);
+			}
+			mTrueKey = DesUtil.decrypt(mSessionKey, mRandomKey, "utf-8");
+			if (Log.D) {
+				Log.d(TAG, "SecureNetwork trueKey -->> " + mTrueKey);
+			}
+			if (null == mTrueKey) {
+				complete(STATE_FAILED);
+				return;
+			}
+			complete(STATE_SUCCEED);
+		}
+	};
+
+}

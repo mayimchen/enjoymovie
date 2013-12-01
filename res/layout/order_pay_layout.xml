@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical"
+    android:paddingBottom="9dp" >
+
+    <RelativeLayout
+        android:id="@+id/order_money_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/red" >
+
+        <!-- 订单金额 -->
+
+        <TextView
+            android:id="@+id/order_money_id"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="10dp"
+            android:layout_marginTop="5dp"
+            android:paddingBottom="1dp"
+            android:paddingTop="1dp"
+            android:text="订单金额"
+            android:textColor="@color/white"
+            android:textSize="14dp" >
+        </TextView>
+
+        <!-- 订单金额内容 -->
+
+        <TextView
+            android:id="@+id/order_money_content"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignBottom="@+id/order_money_id"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="10dp"
+            android:paddingBottom="1dp"
+            android:paddingTop="1dp"
+            android:textColor="@color/white"
+            android:textSize="14dp" >
+        </TextView>
+    </RelativeLayout>
+    <!-- 商品金额 -->
+
+    <TextView
+        android:id="@+id/product_money_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/order_money_layout"
+        android:layout_marginLeft="10dp"
+        android:layout_marginTop="9dp"
+        android:lineSpacingMultiplier="1.1"
+        android:text="商品金额"
+        android:textColor="@color/black"
+        android:textSize="12dp" >
+    </TextView>
+
+    <!-- 商品金额内容 -->
+
+    <TextView
+        android:id="@+id/product_money_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/product_money_id"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="10dp"
+        android:layout_marginTop="9dp"
+        android:lineSpacingMultiplier="1.1"
+        android:textColor="@color/red"
+        android:textSize="12dp" >
+    </TextView>
+
+    <!-- 运费金额 -->
+
+    <TextView
+        android:id="@+id/transportation_money_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/product_money_id"
+        android:layout_marginLeft="10dp"
+        android:lineSpacingMultiplier="1.1"
+        android:text="yunfei"
+        android:textColor="@color/black"
+        android:textSize="12dp" >
+    </TextView>
+
+    <!-- 运费金额内容 -->
+
+    <TextView
+        android:id="@+id/transportation_money_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/transportation_money_id"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="10dp"
+        android:lineSpacingMultiplier="1.1"
+        android:textColor="@color/red"
+        android:textSize="12dp" >
+    </TextView>
+
+    <!-- 优惠金额 -->
+
+    <TextView
+        android:id="@+id/coupon_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/transportation_money_id"
+        android:layout_marginLeft="10dp"
+        android:lineSpacingMultiplier="1.1"
+        android:text="212"
+        android:textColor="@color/black"
+        android:textSize="12dp" >
+    </TextView>
+
+    <!-- 优惠金额内容 -->
+
+    <TextView
+        android:id="@+id/coupon_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/coupon_id"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="10dp"
+        android:lineSpacingMultiplier="1.1"
+        android:textColor="@color/red"
+        android:textSize="12dp" >
+    </TextView>
+
+    <!-- 实际运费 -->
+
+    <TextView
+        android:id="@+id/actual_transportation_money_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/coupon_id"
+        android:layout_marginLeft="10dp"
+        android:lineSpacingMultiplier="1.1"
+        android:text="shiji"
+        android:textColor="@color/black"
+        android:textSize="12dp" >
+    </TextView>
+
+    <!-- 实际运费内容 -->
+
+    <TextView
+        android:id="@+id/actual_transportation_money_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/actual_transportation_money_id"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="10dp"
+        android:lineSpacingMultiplier="1.1"
+        android:textColor="@color/red"
+        android:textSize="12dp" >
+    </TextView>
+
+    <!-- 余额 -->
+
+    <TextView
+        android:id="@+id/balance_money_id"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/actual_transportation_money_id"
+        android:layout_marginLeft="10dp"
+        android:lineSpacingMultiplier="1.1"
+        android:text="金额"
+        android:textColor="@color/black"
+        android:textSize="12dp" >
+    </TextView>
+
+    <!-- 余额内容 -->
+
+    <TextView
+        android:id="@+id/balance_money_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/balance_money_id"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="10dp"
+        android:lineSpacingMultiplier="1.1"
+        android:textColor="@color/red"
+        android:textSize="12dp" >
+    </TextView>
+
+</RelativeLayout>

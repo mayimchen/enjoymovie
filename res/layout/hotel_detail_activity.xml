@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent" >
+
+    <!-- 界面Title -->
+
+    <include
+        android:id="@+id/common_title"
+        layout="@layout/head" />
+
+    <ScrollView
+        android:id="@+id/hotel_scrollview"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_below="@id/common_title"
+        android:fadeScrollbars="true" >
+
+        <RelativeLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="20dp" >
+
+            <TextView
+                android:id="@+id/hotel_name_tv"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:maxLines="2"
+                android:minHeight="32dp"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp" />
+
+            <RelativeLayout
+                android:id="@+id/hotel_picture_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/hotel_name_tv"
+                android:layout_marginBottom="10dp"
+                android:layout_marginLeft="7dp"
+                android:layout_marginRight="7dp"
+                android:background="@drawable/background_corners_no_line" >
+
+                <LinearLayout
+                    android:id="@+id/guess_taste"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentTop="true"
+                    android:orientation="vertical" >
+
+                    <RelativeLayout
+                        android:id="@+id/product_list_item"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_centerHorizontal="true"
+                        android:layout_marginLeft="1dp"
+                        android:layout_marginRight="1dp"
+                        android:minHeight="104dp"
+                        android:paddingBottom="10dp"
+                        android:paddingTop="5dp" >
+
+                        <!-- 右箭头 -->
+
+                        <ImageView
+                            android:id="@+id/arrow_rightt"
+                            android:layout_width="13dp"
+                            android:layout_height="13dp"
+                            android:layout_alignParentRight="true"
+                            android:layout_centerVertical="true"
+                            android:layout_marginRight="1dp"
+                            android:clickable="true"
+                            android:src="@drawable/android_list_idex" >
+                        </ImageView>
+                        <!-- 左箭头 -->
+
+                        <ImageView
+                            android:id="@+id/arrow_left"
+                            android:layout_width="13dp"
+                            android:layout_height="13dp"
+                            android:layout_alignParentLeft="true"
+                            android:layout_centerVertical="true"
+                            android:layout_marginLeft="1dp"
+                            android:src="@drawable/android_list_idex_left" >
+                        </ImageView>
+
+                        <com.banking.xc.utils.ui.MyGallery
+                            android:id="@+id/hotel_picture_head_gallery"
+                            android:layout_width="fill_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_below="@id/guess_taste"
+                            android:layout_marginBottom="5dp"
+                            android:layout_marginLeft="2dp"
+                            android:layout_marginRight="2dp"
+                            android:layout_marginTop="5dp"
+                            android:layout_toLeftOf="@id/arrow_rightt"
+                            android:layout_toRightOf="@id/arrow_left"
+                            android:drawingCacheQuality="high"
+                            android:gravity="left"
+                            android:spacing="2dp"
+                            android:unselectedAlpha="1" />
+                    </RelativeLayout>
+
+                    <TextView
+                        android:id="@+id/hotel_picture_name_tv"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_horizontal"
+                        android:maxLines="2"
+                        android:minHeight="32dp"
+                        android:paddingLeft="10dp"
+                        android:paddingRight="10dp" />
+                </LinearLayout>
+            </RelativeLayout>
+
+            <LinearLayout
+                android:id="@+id/hotel_middle_layout"
+                android:layout_below="@id/hotel_picture_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="5dp"
+                android:layout_marginLeft="7dp"
+                android:layout_marginRight="7dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/background_corners"
+                android:orientation="vertical"
+                android:padding="1dp">
+
+                <RelativeLayout
+                    android:id="@+id/hotel_service_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="43dp"
+                    android:background="@drawable/more_acitivity_item_selector_top_corners"
+                    android:clickable="true"
+                    android:paddingLeft="13dp"
+                     >
+
+                    <TextView
+                        android:id="@+id/service_iv"
+                        android:layout_width="21dp"
+                        android:layout_height="21dp"
+                        android:layout_alignParentLeft="true"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/hotel_device_icon2"
+                        android:padding="5dp" />
+
+                    <TextView
+                        android:id="@+id/service_tv"
+                        android:layout_width="wrap_content"
+                        android:layout_height="21dp"
+                        android:layout_centerVertical="true"
+                        android:layout_toRightOf="@id/service_iv"
+                        android:layout_marginLeft="5dp"
+                        android:text="酒店设施："
+                        android:textSize="14dp" />
+
+                    <LinearLayout
+                        android:id="@+id/hotel_service_content_layout"
+                        android:layout_width="wrap_content"
+                        android:layout_height="21dp"
+                        android:layout_marginLeft="10dp"
+                        android:layout_centerVertical="true"
+                        android:layout_toRightOf="@id/service_tv" />
+
+                    <ImageView
+                        android:id="@+id/my_msg_arrow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentRight="true"
+                        android:layout_centerVertical="true"
+                        android:paddingRight="12dp"
+                        android:src="@drawable/android_list_idex" />
+                </RelativeLayout>
+                <View 
+                    style="@style/line1"
+                    android:visibility="gone"/>
+                <RelativeLayout
+                    android:id="@+id/hotel_comment_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="43dp"
+                    android:background="@drawable/more_activity_item_selector_no_corners"
+                    android:clickable="true"
+                    android:paddingLeft="13dp"
+                    android:paddingTop="10dp" 
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/my_easybuy_image"
+                        android:layout_width="21dp"
+                        android:layout_height="21dp"
+                        android:layout_alignParentLeft="true"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/main_menu_easy"
+                        android:padding="5dp" />
+
+                    <TextView
+                        android:id="@+id/my_easybuy_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_toRightOf="@id/my_easybuy_image"
+                        android:paddingLeft="15dp"
+                        android:text="价格:" />
+
+                    <ImageView
+                        android:id="@+id/my_easybuy_arrow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentRight="true"
+                        android:layout_centerVertical="true"
+                        android:paddingRight="12dp"
+                        android:src="@drawable/android_list_idex" />
+                </RelativeLayout>
+                   <View 
+                    style="@style/line1"/>
+                <RelativeLayout
+                    android:id="@+id/hotel_near_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="43dp"
+                    android:background="@drawable/more_activity_item_selector_no_corners"
+                    android:clickable="true"
+                    android:padding="2dp"
+                    >
+
+                    <TextView
+                        android:id="@+id/hotel_near_iv"
+                        android:layout_width="21dp"
+                        android:layout_height="21dp"
+                        android:layout_alignParentLeft="true"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/location_icon_group"
+                        android:layout_marginLeft="13dp"
+                        android:padding="5dp" >
+                    </TextView>
+
+                    <TextView
+                        android:id="@+id/hotel_near_content"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_toRightOf="@id/hotel_near_iv"
+                        android:layout_marginLeft="8dp"
+                        android:layout_marginRight="22dp"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        android:text="周边" 
+                        android:textColor="@color/red"/>
+
+                    <ImageView
+                        android:id="@+id/my_discuss_arrow"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentRight="true"
+                        android:layout_centerVertical="true"
+                        android:paddingRight="12dp"
+                        android:src="@drawable/android_list_idex" />
+                </RelativeLayout>
+                   <View 
+                    style="@style/line1"/>
+                <RelativeLayout
+                    android:id="@+id/room_window_time_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/more_activity_item_selector_bottom_corners"
+                    android:clickable="true"
+                    android:padding="2dp"
+                    android:minHeight="43dp"
+                   >
+
+                    <TextView
+                        android:id="@+id/hotel_detail_time_imageTv"
+                        android:layout_width="33dp"
+                        android:layout_height="33dp"
+                        android:layout_alignParentLeft="true"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/hotel_device_icon"
+                        android:layout_marginLeft="8dp"
+                        android:padding="5dp" >
+                    </TextView>
+
+                    <TextView
+                        android:id="@+id/hotel_detail_tv"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_toRightOf="@id/hotel_detail_time_imageTv"
+                        android:maxLines="3"
+                        android:layout_marginRight="3dp"
+                        android:ellipsize="end"
+                        android:paddingLeft="15dp"
+                        android:layout_centerVertical="true"
+                        android:text="" />
+                </RelativeLayout>
+            </LinearLayout>
+
+            <ListView
+                android:id="@+id/hotel_room_list"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/hotel_middle_layout"
+                android:layout_margin="12dp"
+                android:visibility="gone" />
+        </RelativeLayout>
+    </ScrollView>
+
+</RelativeLayout>

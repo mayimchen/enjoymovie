@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <!-- 界面Title -->
+
+    <include
+        android:id="@+id/common_title"
+        android:layout_width="wrap_content"
+        layout="@layout/head" />
+
+    <RelativeLayout
+        android:id="@+id/vacation_items_base_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="40dp"
+        android:layout_below="@id/common_title"
+        android:layout_marginTop="6dp"
+        android:padding="3dp" >
+
+        <TextView
+            android:id="@+id/departure_city_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="20dp"
+            android:singleLine="true"
+            android:text="" />
+
+        <TextView
+            android:id="@+id/flight_around_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="15dp"
+            android:layout_toRightOf="@id/departure_city_tv"
+            android:background="@drawable/flight_around_button" />
+
+        <TextView
+            android:id="@+id/arrive_city_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="15dp"
+            android:layout_toRightOf="@id/flight_around_button"
+            android:singleLine="true"
+            android:text="" />
+        
+        <TextView
+            android:id="@+id/fl_depart_time_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="15dp"
+            android:layout_toRightOf="@id/arrive_city_tv"
+            android:singleLine="true"
+            android:text="" />
+        <!--
+             <CheckBox
+            android:id="@+id/filter_check_box"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            />
+        -->
+
+    </RelativeLayout>
+    <!-- 排序按钮 -->
+
+
+    <!-- android:layout_width="@dimen/product_detail_left_width" -->
+
+    <LinearLayout
+        android:id="@+id/vacation_item_sort_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/vacation_items_base_layout"
+        android:layout_centerHorizontal="true"
+        android:orientation="vertical"
+        android:paddingBottom="6dp"
+        android:paddingTop="15dp" >
+
+        <!-- android:layout_height="match_parent" -->
+
+        <RadioGroup
+            android:id="@+id/vacation_item_sort_group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" >
+
+            <RadioButton
+                android:id="@+id/sort_button_left"
+                style="@style/product_list_sort_button"
+                android:background="@drawable/sort_left_button"
+                android:text="度假套餐" >
+
+            </RadioButton>
+
+            <RadioButton
+                android:id="@+id/sort_button_middle"
+                style="@style/product_list_sort_button"
+                android:background="@drawable/sort_middle_button"
+                android:text="度假机票" >
+            </RadioButton>
+
+            <RadioButton
+                android:id="@+id/sort_button_right"
+                style="@style/product_list_sort_button"
+                android:background="@drawable/sort_right_button"
+                android:text="独立机票" >
+            </RadioButton>
+        </RadioGroup>
+    </LinearLayout>
+
+    <!--
+         <ScrollView
+        android:id="@+id/vacation_item_scrollview"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_below="@id/vacation_items_base_layout"
+        android:cacheColorHint="#00000000" >
+    -->
+    <LinearLayout
+        android:id="@+id/vacation_packageitem_list_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/vacation_item_sort_layout"
+        android:orientation="vertical" >
+
+        <RelativeLayout
+            android:layout_width="fill_parent"
+            android:layout_height="45dp"
+            android:background="@color/nice_blue" >
+
+            <TextView
+                android:id="@+id/vacation_bind_package_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="10dp"
+                android:text="旅游推荐套餐："
+                android:textColor="@color/white"
+                android:textSize="16sp" />
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"
+                android:layout_marginRight="8dp"
+                android:src="@drawable/android_list_idex" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/package_list_loading_layout"
+            android:layout_width="fill_parent"
+            android:layout_height="100dp" >
+
+            <ProgressBar
+                android:id="@+id/package_list_loading_bar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/package_list_nodata_layout"
+            android:layout_width="fill_parent"
+            android:layout_height="40dp"
+            android:visibility="gone" >
+
+            <TextView
+                android:id="@+id/package_list_nodata_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:text="暂无相关度假套餐" />
+        </RelativeLayout>
+
+        <ListView
+            android:id="@+id/package_listview"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:cacheColorHint="#00000000"
+            android:fadeScrollbars="true" >
+        </ListView>
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/vacation_flightitem_list_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/vacation_item_sort_layout"
+        android:orientation="vertical" 
+        android:visibility="gone">
+
+        <RelativeLayout
+            android:layout_width="fill_parent"
+            android:layout_height="45dp"
+            android:background="@color/nice_blue" >
+
+            <TextView
+                android:id="@+id/vacation_bind_item_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="10dp"
+                android:text="旅游推荐机票："
+                android:textColor="@color/white"
+                android:textSize="16sp" />
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"
+                android:layout_marginRight="8dp"
+                android:src="@drawable/android_list_idex" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/item_list_loading_layout"
+            android:layout_width="fill_parent"
+            android:layout_height="100dp" >
+
+            <ProgressBar
+                android:id="@+id/vacationitem_list_loading_bar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/item_list_nodata_layout"
+            android:layout_width="fill_parent"
+            android:layout_height="40dp"
+            android:visibility="gone" >
+
+            <TextView
+                android:id="@+id/vacationitem_list_nodata_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:text="暂无度假相关机票" />
+        </RelativeLayout>
+
+        <ListView
+            android:id="@+id/vacation_item_listview"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:cacheColorHint="#00000000"
+            android:fadeScrollbars="true" >
+        </ListView>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/vacation_absolute_list_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/vacation_item_sort_layout"
+        android:orientation="vertical"
+        android:visibility="gone" >
+
+        <RelativeLayout
+            android:layout_width="fill_parent"
+            android:layout_height="45dp"
+            android:background="@color/nice_blue" >
+
+            <TextView
+                android:id="@+id/flight_item_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="10dp"
+                android:text="其他机票:"
+                android:textColor="@color/white"
+                android:textSize="16sp" />
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"
+                android:layout_marginRight="8dp"
+                android:src="@drawable/android_list_idex" />
+        </RelativeLayout>
+        <!--
+                 <TextView
+                android:id="@+id/flight_item_tv"
+                android:layout_width="fill_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="20dp"
+                android:background="@drawable/product_even_row_normal"
+                android:gravity="center_vertical"
+                android:padding="5dp"
+                android:text="其他机票："
+                android:textSize="16sp" />
+        -->
+
+        <RelativeLayout
+            android:id="@+id/flight_list_loading_layout"
+            android:layout_width="fill_parent"
+            android:layout_height="100dp" >
+
+            <ProgressBar
+                android:id="@+id/flight_list_loading_bar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/flight_list_nodata_layout"
+            android:layout_width="fill_parent"
+            android:layout_height="40dp"
+            android:visibility="gone" >
+
+            <TextView
+                android:id="@+id/flight_list_nodata_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:text="暂无系统机票" />
+        </RelativeLayout>
+
+        <ListView
+            android:id="@+id/suitable_flight_listview"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:cacheColorHint="#00000000"
+            android:fadeScrollbars="true" >
+        </ListView>
+    </LinearLayout>
+    <!-- </ScrollView> -->
+
+    <include
+        android:id="@+id/loading_error_tips_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        layout="@layout/loading_error_tips" />
+
+</RelativeLayout>

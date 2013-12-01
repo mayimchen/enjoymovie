@@ -1,0 +1,14 @@
+package com.banking.xc.utils;
+
+import android.webkit.GeolocationPermissions.Callback;
+import android.webkit.WebChromeClient;
+
+public class GeoWebChromeClient extends WebChromeClient {
+
+	@Override
+	public void onGeolocationPermissionsShowPrompt(String origin, Callback callback) {
+		callback.invoke(origin, true, false);
+		super.onGeolocationPermissionsShowPrompt(origin, callback);
+	}
+	
+}

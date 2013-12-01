@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<declare-styleable name="gallery_bg">
+		<attr name="android:galleryItemBackground" />
+	</declare-styleable>
+	<declare-styleable name="Gallery">
+		<attr name="android:galleryItemBackground" />
+	</declare-styleable>
+    <!-- 图片长宽比例，保证图片不变形 -->
+    <declare-styleable name="image">
+        <attr name="ratio" format="float"/>
+    </declare-styleable>
+    
+    <!-- 下拉刷新 -->
+    <declare-styleable name="pullrefresh">
+        <attr name="actionViewId" format="reference" />
+        <attr name="toolViewId" format="reference" />
+    </declare-styleable>
+</resources>

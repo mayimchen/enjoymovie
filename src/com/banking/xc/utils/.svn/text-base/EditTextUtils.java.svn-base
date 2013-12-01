@@ -1,0 +1,26 @@
+package com.jingdong.app.mall.utils;
+
+import android.content.Intent;
+import android.text.Selection;
+import android.widget.EditText;
+import android.widget.TextView;
+
+public class EditTextUtils {
+
+	public static void setTextWithSelection(EditText editText, String str) {
+		editText.setText(str);
+		editText.setSelection(str.length());
+	}
+	
+	public static void setTextViewText(TextView textView,Intent intent,String str){
+		String titleTemp = intent.getStringExtra("title");
+		String titleName;
+		if(null != titleTemp && titleTemp.length() != 0){
+			titleName = titleTemp;
+		}else{
+			titleName = str;
+		}
+		textView.setText(titleName);
+	}
+
+}

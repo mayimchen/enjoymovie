@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="skytv_com.banking.enjoymovie"
+    android:versionCode="1000"
+    android:versionName="1.1.0" >
+
+    <supports-screens
+        android:anyDensity="true"
+        android:largeScreens="true"
+        android:normalScreens="true"
+        android:smallScreens="true" />
+
+    <application
+        android:name=".MyApplication"
+        android:icon="@drawable/icon_logo"
+        android:label="@string/app_name"
+        android:theme="@style/applicationTheme" >
+
+        <!-- 框架 -->
+        <activity
+            android:name="skytv_com.banking.enjoymovie.MovieHomeActivity"
+            android:label="@string/app_name"
+            android:screenOrientation="landscape"
+            android:windowSoftInputMode="stateHidden" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="skytv_com.banking.enjoymovie.VideoPlayerActivity"
+            android:screenOrientation="landscape" >
+        </activity>
+        <activity
+            android:name="skytv_com.banking.enjoymovie.VideoListActivity"
+            android:screenOrientation="landscape" >
+        </activity>
+         <activity
+            android:name="skytv_com.banking.enjoymovie.WebActivity"
+            android:hardwareAccelerated="true"
+            android:screenOrientation="landscape" >
+        </activity>
+    </application>
+
+    <!-- 4 -->
+    <uses-sdk
+        android:minSdkVersion="5"
+        android:targetSdkVersion="9" />
+
+    <!-- 权限 -->
+    <!-- 互联网 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- 检查网络状态 -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- UUID 取得 -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- 写SD卡，1.6以上版本需要 -->
+    <!-- 读取 -->
+    <!-- 访问 WIFI 状态 -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- 改变 WIFI 状态 -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <!-- 在某些特殊情况下， wifi的开启可能需要这个权限 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- 手机震动 -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- 地理位置 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- 地理位置 -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.RESTART_PACKAGES" />
+
+</manifest>

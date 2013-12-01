@@ -1,0 +1,113 @@
+package com.jingdong.app.mall.utils;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Handler;
+import android.view.KeyEvent;
+
+import com.jingdong.app.mall.MainActivity;
+import com.jingdong.app.mall.MyApplication;
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.utils.ui.DialogController;
+
+public class BitmapkitUtils {
+	private final static int RETRY_TIMES = 3;
+	public boolean isLoadLibFailed = false;
+    
+	public  void loadNativeLibrary() {	
+		if(Log.D){
+			Log.d("xudong", " loadNativeLibrary-->> ");
+		}
+		for(int retry=0; retry < RETRY_TIMES;retry++) {
+			try {
+				System.loadLibrary("jdbitmapkit");
+			} catch (Throwable  e) {
+				if(Log.D){
+					Log.d("xudong", " retry -->> " + retry);
+				}
+					e.printStackTrace();
+				if(retry < RETRY_TIMES - 1) {
+					continue;					
+				} else {
+					isLoadLibFailed = true;
+				}
+			} 
+			break;
+		}
+	}
+	
+	public void alertLoadlibFailedDialog(Handler handler) {
+		if (Log.D) {
+			Log.d("HttpGroup", "id:" + "- alertErrorDialog() -->> ");
+		}
+		MyApplication application = MyApplication.getInstance();
+		final MainActivity mainActivity = application.getMainActivity();
+		// 弹窗通知用户
+		final DialogController httpDialogController = new DialogController() {
+
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				switch (which) {
+				case AlertDialog.BUTTON_POSITIVE:// （左边的按钮）去反馈
+					actionFeedbackWebsite(mainActivity);
+					break;
+				case AlertDialog.BUTTON_NEGATIVE:// （右边的按钮）关闭
+					actionClose();
+					break;
+				}
+			}
+			@Override
+			public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+				return true;
+			}
+		};
+
+		httpDialogController.setTitle(application.getText(R.string.alert_title_signature_error));
+		httpDialogController.setMessage(application.getText(R.string.comment_feedback));
+		// （左边的按钮）重试
+		httpDialogController.setPositiveButton(application.getText(R.string.label_feedback));
+		httpDialogController.setNegativeButton(application.getText(R.string.app_error_close));
+		httpDialogController.init(mainActivity);
+		handler.post(new Runnable() {
+				@Override
+				public void run() {
+					httpDialogController.show();
+				}
+			});
+		
+	}
+	
+	//add by hanxudong
+	/**
+	 * 确定（去官方网站）
+	 */
+	public void actionFeedbackWebsite(MainActivity aMainActivity) {
+		if(Log.D){
+			Log.d("Temp", "actionFeedbackWebsite -->> ");
+		}
+        Uri uri = Uri.parse("http://m.360buy.com/showvote.html");
+//        aMainActivity.startActivity(new Intent(Intent.ACTION_VIEW,uri));
+        MyActivity.startActivityForResultNoExceptionStatic(aMainActivity,new Intent(Intent.ACTION_VIEW,uri),1);
+        MyApplication.exitAll();
+	}
+	
+	/**
+	 * 关闭
+	 */
+	public void actionClose(){
+        MyApplication.exitAll();
+	}
+	
+	public boolean isLoadLibFailed(){
+		if(Log.D){
+			Log.d("xudong", "isLoadLibFailed -->> " + isLoadLibFailed);
+		}
+		return isLoadLibFailed;
+	}
+	
+        
+    public static native byte[] encodeJni(byte[] src, boolean decryption,Activity activity);
+}

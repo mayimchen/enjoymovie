@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <style name="category_text_style">
+        <item name="android:textColor">@color/white</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+    
+    <style name="dialog" parent="@android:style/Theme.Dialog">
+        <item name="android:windowFrame">@null</item>
+        <item name="android:windowIsFloating">true</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:background">@android:color/black</item>
+        <item name="android:windowBackground">@null</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+    <!-- 全局样式 -->
+    <style name="applicationTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:textColor">@color/black</item>
+    </style>
+    
+     <!-- Title右侧按钮，文字颜色：黑色 -->
+    <style name="title_right_button">
+        <item name="android:textColor">#FFFFFFFF</item>
+        <item name="android:layout_width">80dp</item>
+        <item name="android:background">@drawable/promotion_right_button_background_selector</item>
+    </style>
+      <!-- 界面Title -->
+    <style name="layout_title">
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textSize">15dp</item>
+    </style>
+    <!-- 分割线-横向 -->
+    <style name="line1">
+        <item name="android:layout_width">fill_parent</item>
+        <item name="android:layout_height">1dp</item>
+        <item name="android:background">#FFCCCCCC</item>
+    </style>
+    
+    <!-- 商品列表排序按钮 -->
+    <style name="product_list_sort_button">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">28dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:adjustViewBounds">true</item>
+        <item name="android:padding">0dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:button">@drawable/none</item>
+    </style>
+     <!-- 所有大按钮设定 -->
+    <style name="common_button">
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">#FF000000</item>
+        <item name="android:gravity">center</item>
+        <item name="android:padding">0dp</item>
+        <item name="android:background">@drawable/android_big_button_x</item>
+    </style>
+    <!-- <style name="yellowStarRatingBar" parent="@android:style/Widget.RatingBar">
+        <item name="android:progressDrawable">@drawable/yellow_star_rating_bar_full</item>
+        <item name="android:minHeight">17dp</item> 
+        <item name="android:maxHeight">17dp</item>
+    </style> -->
+     <style name="big_ratingBar" parent="@android:style/Widget.RatingBar">
+        <item name="android:progressDrawable">@drawable/big_ratingbar</item>
+        <item name="android:minHeight">32dp</item><!-- 21 -->
+        <item name="android:maxHeight">32dp</item>
+    </style>
+    
+    <style name="ratingBar" parent="@android:style/Widget.RatingBar">
+        <item name="android:progressDrawable">@drawable/ratingbar</item>
+        <item name="android:minHeight">20dp</item><!-- 21 -->
+        <item name="android:maxHeight">20dp</item>
+    </style>
+    
+    <style name="small_ratingBar" parent="@android:style/Widget.RatingBar">
+        <item name="android:progressDrawable">@drawable/ratingbar2</item>
+        <item name="android:minHeight">16dp</item><!-- 21 -->
+        <item name="android:maxHeight">16dp</item>
+    </style>
+     <style name="popup_anim_alpha_style">
+        <item name="android:windowEnterAnimation">@anim/view_in</item>
+        <item name="android:windowExitAnimation">@anim/view_out</item>
+    </style>
+        <style name="starRatingBar" parent="@android:style/Widget.RatingBar">
+        <item name="android:progressDrawable">@drawable/star_rating_bar_full</item>
+        <item name="android:minHeight">35dip</item> 
+        <item name="android:maxHeight">35dip</item>
+    </style>
+    
+    <!-- 文本颜色：黑色 -->
+    <style name="text_color_black">
+        <item name="android:textColor">#FF000000</item>
+    </style>
+    
+    <style name="dialog_animation_trans" >
+      <item name="android:windowEnterAnimation">@anim/anim_trans_from_bottom</item>
+    </style>
+    
+    <style name="ChannelMoreDlgStyle" parent="@android:Theme.Dialog">
+	    <item name="android:backgroundDimEnabled">false</item>
+	    <item name="android:cacheColorHint">@android:color/transparent</item>
+	    <item name="android:windowBackground">@android:color/white</item>
+    </style>
+   
+</resources>

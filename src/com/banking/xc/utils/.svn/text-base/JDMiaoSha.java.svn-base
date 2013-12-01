@@ -1,0 +1,303 @@
+package com.jingdong.app.mall.utils;
+
+import java.util.HashMap;
+import java.util.List;
+
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.entity.MiaoSha;
+import com.jingdong.app.mall.entity.Product;
+import com.jingdong.app.mall.entity.SourceEntity;
+
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+public class JDMiaoSha {
+	public static final String TAG = "JDMiaoSha";
+
+	private MyActivity context;
+	private MiaoSha data;
+	private Integer resId;
+	private boolean isLoader;
+	private RemoveViewListener removeViewListener;
+	private HashMap<Integer, JDMiaoShaProduct> viewCahce = new HashMap<Integer, JDMiaoShaProduct>();
+	private LinearLayout rootLayout;
+	private View gapView;
+
+	/** 即将开始 */
+	public final static int MIAOSHA_WILLBEGIN = 1;
+	/** 秒杀进行中 */
+	public final static int MIAOSHA_BEGINING = 2;
+	/** 活动结束 */
+	public final static int MIAOSHA_FINISH = 3;
+	private SourceEntity sourceEntity;
+	
+	public void setSourceEntity(SourceEntity sourceEntity){
+		this.sourceEntity = sourceEntity;
+	}
+	public JDMiaoSha(MyActivity context) {
+		this.context = context;
+		rootLayout = new LinearLayout(context);
+	}
+
+	public void bindData(MiaoSha data) {
+		this.data = data;
+	}
+
+	public boolean isLoader() {
+		return isLoader;
+	}
+
+	public void setLoader(boolean isLoader) {
+		this.isLoader = isLoader;
+	}
+
+	public void setProductBackground(Integer resId) {
+		this.resId = resId;
+	}
+
+	private JDMiaoShaProduct getMiaoShaProduct(int key) {
+		JDMiaoShaProduct miaoShaProduct = null;
+		miaoShaProduct = viewCahce.get(key);
+		if (miaoShaProduct == null) {
+			miaoShaProduct = new JDMiaoShaProduct(context);
+			viewCahce.put(key, miaoShaProduct);
+		}
+		return miaoShaProduct;
+	}
+	
+	public void addGapView(View view){
+		gapView = view;
+		rootLayout.addView(gapView, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+	}
+	
+	public void hiadGapView(){
+		if(gapView !=null){
+			gapView.setVisibility(View.GONE);
+		}
+	}
+	
+	public void showGapView(){
+		if(gapView !=null){
+			gapView.setVisibility(View.VISIBLE);
+		}
+	}
+	
+	public View getView(){
+		return rootLayout;
+	}
+	
+	public View getRootView() {
+		try {
+			if (data != null) {
+				final List<Product> products = data.getWareInfoList();
+				rootLayout.removeAllViews();
+				rootLayout.setOrientation(LinearLayout.VERTICAL);
+				if (products != null && products.size() > 0) {
+					final CountDownListener[] listeners = new CountDownListener[products.size()];
+					final LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FILL_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+					params.setMargins(DPIUtil.dip2px(10), DPIUtil.dip2px(5), DPIUtil.dip2px(10), DPIUtil.dip2px(5));
+					for (int i = 0; i < products.size(); i++) {
+						final Product product = products.get(i);
+						if (product != null) {
+							final JDMiaoShaProduct productItem = getMiaoShaProduct(i);
+							productItem.setSourceEntity(sourceEntity);
+							productItem.bindData(product);
+							final View productItemView = productItem.getProductItem();
+							try {
+								productItemView.setBackgroundResource(resId);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
+							listeners[i] = new CountDownListener() {
+
+								@Override
+								public boolean finish(MyCountdownTimer timer, TextView view, int what) {
+									switch (what) {
+									case MIAOSHA_WILLBEGIN:
+										view.setTextColor(context.getResources().getColor(R.color.limit_buy_green));
+										view.setText(R.string.limit_buy_time_remaining);
+										productItem.setProductStyle(what);
+										if (data != null && data.getEndRemainTime() != null && data.getEndRemainTime() > 0) {
+											timer.reset(data.getEndRemainTime(), 1000, MIAOSHA_BEGINING);
+										} else {
+											return true;
+										}
+										break;
+
+									case MIAOSHA_BEGINING:
+										view.setTextColor(context.getResources().getColor(R.color.font_red));
+										view.setText(R.string.limit_buy_time_finish);
+										removeViewListener.onRemove(rootLayout);
+										return true;
+										
+									case MIAOSHA_FINISH:
+										removeViewListener.onRemove(rootLayout);
+										return true;
+									}
+									return false;
+								}
+
+								@Override
+								public void changed(MyCountdownTimer timer, long millisUntilFinished, int what) {
+
+								}
+							};
+						}
+					}
+					createCountdown();
+					setCountdown(data.getStartRemainTime(), data.getEndRemainTime(), listeners, false);
+					rootLayout.addView(getCountdownView());
+					for (int i = 0; i < viewCahce.size(); i++) {
+						final View v = getMiaoShaProduct(i).getProductItem();
+						if (v != null) {
+							rootLayout.addView(v, params);
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return rootLayout;
+	}
+
+	public void setCountdown(MyActivity context, long startRemainTime, long endRemainTime, CountDownListener listener) {
+		setCountdown(startRemainTime, endRemainTime, new CountDownListener[] { listener }, false);
+	}
+
+	public void setCountdown(MyActivity context, long startRemainTime, long endRemainTime, CountDownListener listener, boolean noTitle) {
+		setCountdown(startRemainTime, endRemainTime, new CountDownListener[] { listener }, noTitle);
+	}
+
+	private MyCountdownTimer myCountdownTimer;
+	private View countdown;
+	private TextView countdownTitle;
+	private TextView hh, mm, ss;
+	private int what;
+
+	public void createCountdown() {
+		countdown = ImageUtil.inflate(R.layout.app_limit_countdown, null);
+		countdownTitle = (TextView) countdown.findViewById(R.id.app_product_countdown);
+		hh = (TextView) countdown.findViewById(R.id.app_product_countdown_hh);
+		mm = (TextView) countdown.findViewById(R.id.app_product_countdown_mm);
+		ss = (TextView) countdown.findViewById(R.id.app_product_countdown_ss);
+	}
+
+	public void setHMS(long m) {
+		if (myCountdownTimer != null) {
+			myCountdownTimer.reset(m, 1000, what);
+		}
+	}
+
+	public View getCountdownView() {
+		return countdown;
+	}
+
+	public long getCountdownTime(long startRemainTime, long endRemainTime, boolean noTitle) {
+		long countdownTime = 0;
+		if (startRemainTime > 0) {// TODO
+			if (!noTitle) {
+				countdownTitle.setText(R.string.limit_buy_time_startcountdown);
+			}
+			countdownTime = startRemainTime;
+			what = MIAOSHA_WILLBEGIN;
+		} else if (endRemainTime > 0 && startRemainTime < 0) {
+			if (!noTitle) {
+				countdownTitle.setTextColor(context.getResources().getColor(R.color.limit_buy_green));
+				countdownTitle.setText(R.string.limit_buy_time_remaining);
+			}
+			countdownTime = endRemainTime;
+			what = MIAOSHA_BEGINING;
+		} else if (endRemainTime < 0 && startRemainTime < 0) {
+			if (!noTitle) {
+				countdownTitle.setTextColor(context.getResources().getColor(R.color.font_red));
+				countdownTitle.setText(R.string.limit_buy_time_finish);
+			}
+			countdownTime = 1;
+			what = MIAOSHA_FINISH;
+		}
+		return countdownTime;
+	}
+
+	/**
+	 * 倒计时钟
+	 * 
+	 * @param startRemainTime
+	 * @param endRemainTime
+	 * @return
+	 */
+	public void setCountdown(long startRemainTime, long endRemainTime, final CountDownListener[] listener, boolean noTitle) {
+		final long countdownTime = getCountdownTime(startRemainTime, endRemainTime, noTitle);
+		if (myCountdownTimer == null) {
+			myCountdownTimer = new MyCountdownTimer(countdownTime, 1000, what) {// TODO
+				@Override
+				public void onTick(long millisUntilFinished, int what) {
+					final long[] hms = toHMS(millisUntilFinished);
+					if (hms[0] > 999) {
+						hh.setText(format(999));
+						mm.setText(format(hms[1]));
+						ss.setText(format(hms[2]));
+					} else {
+						hh.setText(format(hms[0]));
+						mm.setText(format(hms[1]));
+						ss.setText(format(hms[2]));
+					}
+					for (int i = 0; listener != null && i < listener.length; i++) {
+						final CountDownListener l = listener[i];
+						if (l != null) {
+							l.changed(this, millisUntilFinished, what);
+						}
+					}
+				}
+
+				@Override
+				public void onFinish(int what) {
+					hh.setText(format(0));
+					mm.setText(format(0));
+					ss.setText(format(0));
+					for (int i = 0; listener != null && i < listener.length; i++) {
+						final CountDownListener l = listener[i];
+						if (l != null) {
+							l.finish(this, countdownTitle, what);
+						}
+					}
+				}
+			}.start();
+		} else {
+			myCountdownTimer.reset(countdownTime, 1000, what);
+		}
+	}
+
+	public void setRemoveListener(RemoveViewListener listener) {
+		this.removeViewListener = listener;
+	}
+
+	public long[] toHMS(long ms) {
+		long s;// 秒
+		long h;// 小时
+		long m;// 分钟
+		h = ms / 1000 / 60 / 60;
+		m = (ms - h * 60 * 60 * 1000) / 1000 / 60;
+		s = ms / 1000 - h * 60 * 60 - m * 60;
+		return new long[] { h, m, s };
+	}
+
+	public String format(long ms) {
+		String text = "" + ms;
+		if (text.length() == 1) {
+			text = "0" + text;
+		}
+		return text;
+	}
+
+	public interface RemoveViewListener {
+		public void onRemove(View v);
+	}
+
+	public interface CountDownListener {
+		public boolean finish(MyCountdownTimer timer, TextView view, int what);
+
+		public void changed(MyCountdownTimer timer, long millisUntilFinished, int what);
+	}
+}

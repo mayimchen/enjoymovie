@@ -1,0 +1,94 @@
+package com.jingdong.app.mall.utils;
+
+import java.util.Calendar;
+
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.constant.Constants;
+import com.jingdong.app.mall.ime.utils.ConstantsUtils;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+
+public class TimeUtils {
+
+	private static final String PREFIX = "时间段：";
+	private static final String CURRENT_DAY = "每日";
+	private static final String NEXT_DAY = "次日";
+	private static final String HOUR = "时";
+	private static final String DIVIDER = " - ";
+	private static final String ZERO = ":00";
+	private static final String FIFTY_NIGHT = ":59";
+
+	/**
+	 * 通过设置的静音时间段返回 设置中的概要描述 -- 静音时间段：当日x时 - 当日（次日）y时
+	 * 
+	 * @param start
+	 *            起始时间
+	 * @param end
+	 *            结束时间
+	 * @return 静音时间段：当日x时 - 当日（次日）y时
+	 */
+	public static String getUnPushTimeSummary(int start, int end) {
+		if (start > end) {
+			return PREFIX + CURRENT_DAY + start + ZERO + DIVIDER + NEXT_DAY + end + FIFTY_NIGHT;
+		}
+		return PREFIX + CURRENT_DAY + start + ZERO + DIVIDER + CURRENT_DAY + end + FIFTY_NIGHT;
+	}
+
+	/**
+	 * 通过设置的静音时间段返回 设置中的概要描述 -- 当日x时 - 当日（次日）y时
+	 * 
+	 * @param start
+	 *            起始时间
+	 * @param end
+	 *            结束时间
+	 * @return 当日x时 - 当日（次日）y时
+	 */
+	public static String getSimpleUnPushTimeSummary(int start, int end) {
+		if (start > end) {
+			return CURRENT_DAY + start + ZERO + DIVIDER + NEXT_DAY + end + FIFTY_NIGHT;
+		}
+		return CURRENT_DAY + start + ZERO + DIVIDER + CURRENT_DAY + end + FIFTY_NIGHT;
+	}
+
+	/**
+	 * 当前时间是否是消息推送的静音时间段
+	 * 
+	 * @return true:静音时间  false 正常推送时间
+	 */
+	public static boolean isPushMsgMuteNow(Context context) {
+
+		SharedPreferences settings = CommonUtil.getJdSharedPreferences();
+
+		int start = settings.getInt(context.getString(R.string.msg_auto_un_push_time_start_time_key), ConstantsUtils.PUSH_MESSAGE_SILENCE_START_TIME);
+		int end = settings.getInt(context.getString(R.string.msg_auto_un_push_time_end_time_key), ConstantsUtils.PUSH_MESSAGE_SILENCE_END_TIME);
+
+		if (start == -1 || end == -1) {
+			return false;
+		}
+
+		Calendar calendar = Calendar.getInstance();
+		int hour = calendar.get(Calendar.HOUR_OF_DAY);
+
+		if (hour == end || hour == start) {
+			return true;
+		}
+
+		if (end >= start) { // 今天到今天
+			if (hour > start && hour < end) {
+				return true;
+			} else {
+				return false;
+			}
+		} else { // 今天 到 次日
+			if (hour > start && hour < 24) { // 时间在今天范围内
+				return true;
+			} else if (hour >= 0 && hour < end) {
+				return true;
+			} else {          
+				return false;
+			}
+		}
+	}
+
+}

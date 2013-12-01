@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:orientation="horizontal" >
+
+    <ImageView
+        android:layout_width="80dp"
+        android:layout_height="100dp"
+        android:src="@drawable/main_navigation_hotel" />
+
+    <RelativeLayout
+        android:layout_width="fill_parent"
+        android:layout_height="100dp"
+        android:padding="5dp" >
+
+        <TextView
+            android:id="@+id/order_hotel_room_name"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:layout_marginTop="20dp"
+            android:singleLine="true"
+            android:text="四季青全家乐酒店-舒适双人间" >
+        </TextView>
+
+        <TextView
+            android:id="@+id/order_product_time"
+            android:layout_width="150dp"
+            android:layout_height="wrap_content"
+            android:layout_alignLeft="@id/order_hotel_room_name"
+            android:layout_below="@id/order_hotel_room_name"
+            android:layout_marginTop="8dp"
+            android:singleLine="true"
+            android:text="2012-2-12 23:21:21" >
+        </TextView>
+
+        <Button android:id="@+id/delete_order_button"
+                android:background="@drawable/delete_button"
+                android:layout_height="30dp"
+                android:layout_width="30dp"
+                android:layout_alignTop="@id/order_product_time"
+                android:layout_toRightOf="@id/order_product_time"
+                 />
+    </RelativeLayout>
+
+</LinearLayout>

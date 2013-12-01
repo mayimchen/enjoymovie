@@ -1,0 +1,46 @@
+package com.jingdong.app.mall.utils;
+
+public class JniUtils {
+
+	/**
+	 * SharedPreferences 文件名称，一个android系统只有一个值
+	 * 
+	 * @param context
+	 * @return
+	 */
+	public native static String getSHN();
+
+	/**
+	 * 用户名加密 
+	 * @param str
+	 */
+	public native static String eU(String str);
+	/**
+	 * 密码加密
+	 * @param str
+	 */
+	public native static String eP(String str);
+	/**
+	 * 用户名解密
+	 * @param str
+	 * @return
+	 */
+	public native static String dU(String str);
+	/**
+	 * 密码解密
+	 * @param str
+	 * @return
+	 */
+	public native static String dP(String str);
+	/**
+	 * 得到秒杀key加密串
+	 * @return
+	 */
+	public native static String eMK();
+	/**
+	 * 秒杀key解密
+	 * @return
+	 */
+	public native static String dMK(String str);
+	
+}

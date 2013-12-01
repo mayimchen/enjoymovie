@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="menu_easy" type="id"></item>
+    <item name="menu_search" type="id"></item>
+    <item name="menu_setup" type="id"></item>
+    <item name="menu_history" type="id"></item>
+    <item name="menu_feedback" type="id"></item>
+    <item name="menu_help" type="id"></item>
+    <item name="menu_about" type="id"></item>
+    <item name="menu_exit" type="id"></item>
+    <item name="menu_version" type="id"></item>
+</resources>

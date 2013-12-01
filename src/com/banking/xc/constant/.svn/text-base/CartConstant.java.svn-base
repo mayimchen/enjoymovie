@@ -1,0 +1,522 @@
+package com.jingdong.app.mall.constant;
+
+/**
+ * 购物车的一些常量信息
+ * @author tandingqiang
+ *
+ */
+public interface CartConstant {
+
+	/**
+	 * 购物车同步的functionId
+	 */
+	public static final String FUNCTION_ID_SHOPPING_CART = "cart";
+
+	// key ---------------------------------------------------------------
+
+	/**
+	 * 参数：是否返回全结构，true 返回数量    -------- null 或者 false 是返回全结构
+	 */
+	public static final String KEY_NO_RESPONSE = "noResponse";
+
+	/**
+	 * 参数：操作集合
+	 */
+	public static final String KEY_OPERATIONS = "operations";
+
+	/**
+	 * 参数：新接口标志位
+	 */
+	public static final String KEY_SYNC_TYPE = "syntype";
+
+	/**
+	 * 参数：操作类型
+	 */
+	public static final String KEY_OPERATE_TYPE = "carttype";
+
+	/**
+	 * 参数：商品集合
+	 */
+	public static final String KEY_THE_SKUS = "TheSkus";
+
+	/**
+	 * 参数：套装集合
+	 */
+	public static final String KEY_THE_PACKS = "ThePacks";
+
+	/**
+	 * 参数：cartuuid，生成算法见
+	 * @see StatisticsReportUtil.readCartUUID();
+	 */
+	public static final String KEY_CART_UUID = "cartuuid";
+
+	/**
+	 * 参数：商品ID
+	 */
+	public static final String KEY_SKU_ID = "Id";
+
+	/**
+	 * 参数：套装ID
+	 */
+	public static final String KEY_PACK_ID = KEY_SKU_ID;
+	
+	/**
+	 * 参数：延保商品所在套装ID
+	 */
+	public static final String KEY_YB_PACK_ID = "ybPackId";
+
+	/**
+	 * 参数：套装id
+	 */
+	public static final String KEY_SUITS_ID = KEY_SKU_ID;
+
+	/**
+	 * 参数：商品数量
+	 */
+	public static final String KEY_NUM = "num";
+
+	/**
+	 * 参数：商品数量
+	 */
+	public static final String KEY_NUM_BIG = "Num";
+
+	/**
+	 * 参数：套装类别
+	 */
+	public static final String KEY_SUIT_TYPE = "SType";
+	
+	/**
+	 * 参数：服务器上传的stype 套装类别
+	 */
+	public static final String KEY_REQUEST_SUIT_TYPE = "sType";
+
+	/**
+	 * 参数:返现
+	 */
+	public static final String KEY_REPRICE = "RePrice";
+
+	/**
+	 * 参数:是否有大家电
+	 */
+	public static final String KEY_HAS_DA_JIA_DIAN = "HasDaJiaDian";
+
+	/**
+	 * 参数:是否有大家电
+	 */
+	public static final String KEY_PRICE = "Price";
+
+	/**
+	 * 参数:赠品
+	 */
+	public static final String KEY_GIFTS = "Gifts";
+	
+	/**
+	 * 参数:赠品
+	 */
+	public static final String KEY_GIFTS_MAINSKU = "MainSku";
+
+	/**
+	 * 参数:单品
+	 */
+	public static final String KEY_SKUS = "Skus";
+
+	/**
+	 * 参数:套装
+	 */
+	public static final String KEY_SUITS = "Suits";
+
+	/**
+	 * 参数:折扣
+	 */
+	public static final String KEY_DISCOUNT = "Discount";
+
+	/**
+	 * 参数:价格显示
+	 */
+	public static final String KEY_PRICE_SHOW = "PriceShow";
+
+	/**
+	 * 参数:是否为空
+	 */
+	public static final String KEY_IS_EMPTY = "IsEmpty";
+
+	/**
+	 * 参数:图片域名
+	 */
+	public static final String KEY_IMAGE_DOMAIN = "imageDomain";
+
+	/**
+	 * 参数:附加信息
+	 */
+	public static final String KEY_MESSAGE = "message";
+	
+	/**
+	 * 参数:错误信息
+	 */
+	public static final String KEY_ERROR_MESSAGE = "msg";
+
+	/**
+	 * 参数:附加信息
+	 */
+	public static final String KEY_CODE = "code";
+
+	/**
+	 * 参数:购物车整体
+	 */
+	public static final String KEY_CART_INFO = "cartInfo";
+
+	/**
+	 * 参数:商品类型
+	 */
+	public static final String KEY_AWARD_TYPE = "AwardType";
+
+	/**
+	 * 参数:价格
+	 */
+	public static final String KEY_PRICE_IMG = "PriceImg";
+
+	/**
+	 * 参数:选择状态
+	 */
+	public static final String KEY_CHECK_TYPE = "CheckType";
+
+	/**
+	 * 参数:商品名称
+	 */
+	public static final String KEY_NAME = "Name";
+
+	/**
+	 * 参数:满增/满减提示
+	 */
+	public static final String KEY_SUIT_TIP = "STip";
+
+	/**
+	 * 参数:是否选择了赠品
+	 */
+	public static final String KEY_SELETEED_GIFT = "SelectedGift";
+
+	/**
+	 * 参数:?
+	 */
+	public static final String KEY_POINT = "Point";
+
+	/**
+	 * 参数:?
+	 */
+	public static final String KEY_TAGS = "Tags";
+
+	/**
+	 * 参数:?
+	 */
+	public static final String KEY_TAGET_ID = "targetId";
+
+	/**
+	 * 参数:延保服务
+	 */
+	public static final String KEY_YB_SKUS = "YbSkus";
+
+	/**
+	 * 参数:已选延保服务
+	 */
+	public static final String KEY_YB_CAN_SLECTED = "CanSelectYB";
+
+	/**
+	 * 参数:商品图片url
+	 */
+	public static final String KEY_IMG_URL = "ImgUrl";
+
+	/**
+	 * 参数:满增额度限制
+	 */
+	public static final String KEY_NEED_MONEY = "NeedMoney";
+
+	/**
+	 * 参数:加价购需要的追加金额
+	 */
+	public static final String KEY_ADD_MONEY = "AddMoney";
+
+	/**
+	 * 参数:可选赠品的数量
+	 */
+	public static final String KEY_CAN_SELETED_GIFT_NUM = "CanSelectedGiftNum";
+
+	/**
+	 * 参数:可选赠品列表
+	 */
+	public static final String KEY_CAN_SELECT_GIFTS = "CanSelectGifts";
+
+	/**
+	 * 参数：延保--对应的产品id
+	 */
+	public static final String KEY_YB_SKU_ID = "SkuID";
+
+	/**
+	 * 参数：延保--对应的延保类型集合
+	 */
+	public static final String KEY_YB_TONG_VOS = "YBTongVOs";
+
+	/**
+	 * 参数：延保--对应的延保类别名称
+	 */
+	public static final String KEY_YB_VIRTUAL_TYPE_NAME = "VirtualTypeName";
+
+	/**
+	 * 参数：延保--对应的延保排序
+	 */
+	public static final String KEY_YB_SORT = "Sort";
+
+	/**
+	 * 参数：延保--对应的延保类别type
+	 */
+	public static final String KEY_YB_VIRTUAL_SKU_TYPE = "VirtualSkuType";
+
+	/**
+	 * 参数：延保--对应的延保类别描述
+	 */
+	public static final String KEY_YB_DESCRIBE = "Describe";
+
+	/**
+	 * 参数：延保--对应的延保类别下的品牌集合
+	 */
+	public static final String KEY_YB_TRADEMARK_VO = "YBTrademarkVO";
+
+	/**
+	 * 参数：延保--对应的延保类别下的品牌集合下的延保详情集合
+	 */
+	public static final String KEY_YB_CONFIG_VOS = "YBConfigVOs";
+
+	/**
+	 * 参数：延保--对应的延保类别下的品牌ID
+	 */
+	public static final String KEY_YB_BRAND_ID = "BrandId";
+
+	/**
+	 * 参数：延保--对应的延保类别下的品牌链接
+	 */
+	public static final String KEY_YB_BRAND_LINKS = "BrandLinks";
+
+	/**
+	 * 参数：延保--对应的延保类别下的品牌名称
+	 */
+	public static final String KEY_YB_BRAND_NAME = "BrandName";
+
+	/**
+	 * 参数：延保--对应的延保类别下的品牌下的详情的服务年限
+	 */
+	public static final String KEY_YB_SERVICE_YEAR = "ServiceYear";
+
+	/**
+	 * 参数：延保--对应的延保类别下的品牌下的详情的服务年限
+	 */
+	public static final String KEY_YB_NAME = "Name";
+
+	/**
+	 * 参数：延保--对应的延保类别下的品牌下的详情的id
+	 */
+	public static final String KEY_YB_ID = "Id";
+
+	/**
+	 * 参数：延保--对应的延保类别下的品牌下的详情的显示价格
+	 */
+	public static final String KEY_YB_PRICE_SHOW = "PriceShow";
+
+	/**
+	 * 参数：延保--对应的延保类别下的品牌下的详情的cid ?
+	 */
+	public static final String KEY_YB_CID = "Cid";
+	
+	
+	/**
+	 * 参数：延保--对应的延保类别下的品牌下的详情的价格单元 ?
+	 */
+	public static final String KEY_YB_PRICE_CENT = "PriceCent";
+	
+	/**
+	 * 参数：延保--对应的延保类别下的品牌下的详情的 SkuName
+	 */
+	public static final String KEY_YB_SKU_NAME = "SkuName";
+	
+	/**
+	 * 参数：延保--对应的延保类别下的品牌下的详情的 Message
+	 */
+	public static final String KEY_YB_MESSAGE = "Message";
+	
+	/**
+	 * 参数：延保--对应的延保类别下的品牌下的详情的 引用产品id?
+	 */
+	public static final String KEY_YB_R_WID = "RWid";
+	
+	/**
+	 * 参数：延保--对应的延保类别下的品牌下的详情的引用套装id ?
+	 */
+	public static final String KEY_YB_R_SUIT_ID = "RSuitId";
+	
+	/**
+	 * 参数：延保--对应的延保 下的 已选延保 
+	 */
+	public static final String KEY_YB_MAIN_SKU = "MainYbSku";
+
+	/**
+	 * 参数：订单来源 - source type
+	 */
+	public static final String KEY_SOURCE_TYPE = "source_type";
+
+	/**
+	 * 参数：订单来源 - source value
+	 */
+	public static final String KEY_SOURCE_VALUE = "source_value";
+	
+	/**
+	 * 参数：下单- suits套装内所有商品id集合(原有旧购物逻辑：不区分是不是普通套装，都存放)
+	 */
+	public static final String KEY_SKU_OF_THEPACKS = "SkusOfThePacks";
+	
+	/**
+	 * 参数：下单- 选择的延保对象
+	 */
+	public static final String KEY_YB_INFO = "YbInfo";
+	/**
+	 * 参数：下单- 选择的延保对象 连接符
+	 */
+	public static final String KEY_YB_INFO_LINK = "_";
+	/**
+	 * 参数：下单- 选择的延保对象 单品前缀
+	 */
+	public static final String KEY_YB_INFO_PREFIX_SKU = "1";
+	/**
+	 * 参数：下单- 选择的延保对象 套装前缀
+	 */
+	public static final String KEY_YB_INFO_PREFIX_PACK = "4";
+	
+	/**
+	 * 参数：下单- TheSkus里加入延保对象，需要加入IsYb = true
+	 */
+	public static final String KEY_IS_YB = "IsYb";
+	
+	/**
+	 * 参数：下单- ThePacks 里用来标识满赠套装的key
+	 */
+	public static final String KEY_ORDER_SUIT_TYPE = "suitType";
+	/**
+	 * 参数：下单- Gifts里 赠品类型
+	 */
+	public static final String KEY_ORDER_AWARD_TYPE = "awardType";
+	/**
+	 * 值：下单- suitType 里用来标识满赠套装的value
+	 */
+	public static final int VALUE_ORDER_SUIT_TYPE_FULL_GIFT = 10;
+	/**
+	 * 值：下单- suitType 里用来标识普通套装的value
+	 */
+	public static final int VALUE_ORDER_SUIT_TYPE_COMMON_PACK = 6;
+	/**
+	 * 值：下单- awardType 里用来标识选赠商品的value
+	 */
+	public static final int VALUE_ORDER_AWARD_TYPE_SELECT_GIFT = 1;
+	/**
+	 * 值：下单- sType 里用来标识满赠套装的value
+	 */
+	public static final int VALUE_ORDER_S_TYPE_FULL_GIFT = 13;
+	
+	
+
+	// String ------------------------------------------------------
+
+	/**
+	 * 暂无报价 文案
+	 */
+	public static final String STRING_NO_PRICE = "暂无报价";
+
+	// VALUE -------------------------------------------------------
+
+	/**
+	 * 参数：新接口标志位
+	 */
+	public static final String VALUE_DEFAULT_SYNC_TYPE = "1";
+
+	/**
+	 * 参数：新接口标志位
+	 */
+	public static final int VALUE_CHECKED = 1;
+
+	/**
+	 * 参数：新接口标志位
+	 */
+	public static final int VALUE_UN_CHECKED = 0;
+
+	// 操作类型----------------------------------------------------------
+	/**
+	 * 操作类型：添加商品/套装
+	 */
+	public static final String OPERATE_ADD = "2";
+
+	/**
+	 * 操作类型：修改数量
+	 */
+	public static final String OPERATE_EDIT = "3";
+
+	/**
+	 * 操作类型：删除商品/套装
+	 */
+	public static final String OPERATE_DELETE = "4";
+
+	/**
+	 * 操作类型：单个勾选
+	 */
+	public static final String OPERATE_SINGLE_CHECK = "5";
+
+	/**
+	 * 操作类型：单个去勾选
+	 */
+	public static final String OPERATE_SINGLE_UN_CHECK = "6";
+
+	/**
+	 * 操作类型：全部勾选
+	 */
+	public static final String OPERATE_ALL_CHECK = "7";
+
+	/**
+	 * 操作类型：全部去勾选
+	 */
+	public static final String OPERATE_ALL_UN_CHECK = "8";
+
+	// suitType--------------------------------------------
+	/**
+	 * 普通套装
+	 */
+	public static final String SUIT_TYPE_COMMON_PACK = "4";
+
+	/**
+	 * 向套装添加延保服务
+	 */
+	public static final String SUIT_TYPE_REQUEST_YB_PACK = "7";
+	/**
+	 * 向单品添加延保服务
+	 */
+	public static final String SUIT_TYPE_REQUEST_YB_PRODUCT = "8";
+
+	/**
+	 * 满减（满返）套装
+	 */
+	public static final String SUIT_TYPE_FULL_CUT = "11";
+	
+	/**
+	 * 满赠套装 
+	 */
+	public static final String SUIT_TYPE_FULL_GIFT = "16";
+	
+	/**
+	 * 满赠套装 给服务器执行的操作 操作主商品
+	 */
+	public static final String SUIT_TYPE_REQUEST_FULL_SKU = "13";
+	/**
+	 * 加价购套装
+	 */
+//	public static final String SUIT_TYPE_ADD_PRICR_BUY = "wu";
+
+	/**
+	 * 默认套装类型为空
+	 */
+	public static final String SUIT_TYPE_DEFAULT_PACK = "";
+
+}

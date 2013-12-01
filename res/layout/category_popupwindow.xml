@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#b0000000" >
+
+    <!-- 让popupwindow的其他地方变灰 -->
+
+    <RelativeLayout
+        android:id="@+id/main_layout"
+        android:layout_width="210dp"
+        android:layout_height="240dp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="35dp"
+        android:background="@drawable/home_popupwindow_bg" >
+        <GridView
+            android:id="@+id/category_gridview"
+            android:layout_width="fill_parent"
+            android:layout_height="190dp"
+            android:layout_marginLeft="8dp"
+            android:layout_marginRight="8dp"
+            android:layout_marginTop="40dp"
+            android:horizontalSpacing="5dp"
+            android:numColumns="2"
+            android:verticalSpacing="5dp" >
+
+        </GridView>
+</RelativeLayout>
+
+</RelativeLayout>

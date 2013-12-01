@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <include
+        android:id="@+id/common_title"
+        layout="@layout/head" />
+
+    <TextView
+        android:id="@+id/my_info_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="15dp"
+        android:layout_marginTop="10dp"
+        android:text="我的基本信息:" />
+
+    <RelativeLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="7dp"
+        android:layout_marginLeft="14dp"
+        android:layout_marginRight="14dp"
+        android:layout_marginTop="7dp"
+        android:background="@drawable/order_item_bg"
+        android:orientation="vertical" >
+
+        <!-- 订单状态 -->
+
+        <TextView
+            android:id="@+id/user_name_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="10dp"
+            android:paddingBottom="10dp"
+            android:paddingTop="10dp"
+            android:text="姓名："
+            android:textSize="14dp" >
+        </TextView>
+
+
+        <TextView
+            android:id="@+id/user_name_content"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:paddingBottom="10dp"
+            android:paddingTop="10dp"
+            android:text="请填写姓名"
+            android:textColor="@color/gray"
+            android:textSize="14dp" >
+        </TextView>
+
+        <View
+            android:id="@+id/line_parting"
+            style="@style/line1"
+            android:layout_below="@+id/user_name_tv"
+            android:saveEnabled="false" />
+
+        <!-- 订单编号 -->
+
+        <TextView
+            android:id="@+id/sex_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/line_parting"
+            android:layout_marginLeft="10dp"
+            android:paddingBottom="10dp"
+            android:paddingTop="10dp"
+            android:text="性别："
+            android:textColor="@color/black"
+            android:textSize="14dp" >
+        </TextView>
+         <TextView
+            android:id="@+id/sex_content"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:paddingBottom="10dp"
+            android:paddingTop="10dp"
+            android:layout_below="@id/line_parting"
+            android:text="请选择性别"
+            android:textColor="@color/gray"
+            android:textSize="14dp" >
+        </TextView>
+        <View
+            android:id="@+id/line_parting2"
+            style="@style/line1"
+            android:layout_below="@+id/sex_tv"
+            android:saveEnabled="false" />
+
+        <!-- 订单编号 -->
+
+        <TextView
+            android:id="@+id/contact_phone_tv"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/line_parting2"
+            android:layout_marginLeft="10dp"
+            android:paddingBottom="10dp"
+            android:paddingTop="10dp"
+            android:text="联系电话"
+            android:textColor="@color/black"
+            android:textSize="14dp" >
+        </TextView>
+        
+        <TextView
+            android:id="@+id/contact_phone_content"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/line_parting2"
+            android:layout_marginLeft="10dp"
+            android:paddingBottom="10dp"
+            android:paddingTop="10dp"
+            android:layout_alignParentRight="true"
+            android:text="请填写手机号"
+            android:layout_marginRight="10dp"
+            android:textColor="@color/gray"
+            android:textSize="14dp" >
+        </TextView>
+    </RelativeLayout>
+    
+       <TextView
+        android:id="@+id/others_info_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="15dp"
+        android:layout_marginTop="10dp"
+        android:text="其他旅客信息:" />
+    
+        <RelativeLayout
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="7dp"
+        android:layout_marginLeft="14dp"
+        android:layout_marginRight="14dp"
+        android:layout_marginTop="7dp"
+        android:background="@drawable/order_item_bg"
+        android:orientation="vertical" >
+             
+            <TextView
+                android:id="@+id/no_others_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/line_parting2"
+                android:layout_marginLeft="10dp"
+                android:paddingBottom="10dp"
+                android:paddingTop="10dp"
+                android:text="暂无其他旅客信息"
+                android:layout_marginRight="10dp"
+                android:textColor="@color/gray"
+                android:textSize="14dp" >
+            </TextView>
+            
+            <TextView
+                android:id="@+id/add_others"
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_below="@+id/line_parting2"
+                android:layout_marginLeft="10dp"
+                android:paddingBottom="10dp"
+                android:layout_marginTop="10dp"
+                android:layout_alignParentRight="true"
+                android:layout_marginRight="10dp"
+                android:textColor="@color/gray"
+                android:background="@drawable/icon_add"
+                android:textSize="14dp" >
+            </TextView>
+         </RelativeLayout>
+</LinearLayout>

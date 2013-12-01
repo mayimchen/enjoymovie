@@ -1,0 +1,22 @@
+package com.jingdong.app.mall.utils;
+
+public class TimerUntil {
+	
+	public static final String USER_TIME = "user_time";
+	public static final String CHANGED_TIME = "changed_time";
+	public static long startTime;
+	public static long endTime;
+	public static boolean isChangedDate;
+
+	/**
+	 * 获取使用时间秒
+	 * 
+	 * @return
+	 */
+	public static long getUserTime() {
+		if (Log.D) {
+			System.out.println("TimerUntil startTime=" + startTime + "\tendTime=" + endTime);
+		}
+		return (endTime - startTime) / 1000 > 0 ? (endTime - startTime) / 1000 : 0;
+	}
+}

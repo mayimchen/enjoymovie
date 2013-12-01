@@ -1,0 +1,65 @@
+K 25
+svn:wc:ra_dav:version-url
+V 93
+/mobile/JdAppAndroid/!svn/ver/5374/branches/androidJd-main/src/com/jingdong/app/mall/utils/ui
+END
+TriangleLineDrawable.java
+K 25
+svn:wc:ra_dav:version-url
+V 119
+/mobile/JdAppAndroid/!svn/ver/1971/branches/androidJd-main/src/com/jingdong/app/mall/utils/ui/TriangleLineDrawable.java
+END
+CountdownDrawable.java
+K 25
+svn:wc:ra_dav:version-url
+V 116
+/mobile/JdAppAndroid/!svn/ver/5317/branches/androidJd-main/src/com/jingdong/app/mall/utils/ui/CountdownDrawable.java
+END
+DialogController.java
+K 25
+svn:wc:ra_dav:version-url
+V 115
+/mobile/JdAppAndroid/!svn/ver/5204/branches/androidJd-main/src/com/jingdong/app/mall/utils/ui/DialogController.java
+END
+JDListView.java
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/mobile/JdAppAndroid/!svn/ver/4980/branches/androidJd-main/src/com/jingdong/app/mall/utils/ui/JDListView.java
+END
+ProductInfoRelativeLayout.java
+K 25
+svn:wc:ra_dav:version-url
+V 124
+/mobile/JdAppAndroid/!svn/ver/4672/branches/androidJd-main/src/com/jingdong/app/mall/utils/ui/ProductInfoRelativeLayout.java
+END
+DividerDrawable.java
+K 25
+svn:wc:ra_dav:version-url
+V 114
+/mobile/JdAppAndroid/!svn/ver/3111/branches/androidJd-main/src/com/jingdong/app/mall/utils/ui/DividerDrawable.java
+END
+PullRefreshLayout.java
+K 25
+svn:wc:ra_dav:version-url
+V 116
+/mobile/JdAppAndroid/!svn/ver/5447/branches/androidJd-main/src/com/jingdong/app/mall/utils/ui/PullRefreshLayout.java
+END
+CustomTextView.java
+K 25
+svn:wc:ra_dav:version-url
+V 113
+/mobile/JdAppAndroid/!svn/ver/4119/branches/androidJd-main/src/com/jingdong/app/mall/utils/ui/CustomTextView.java
+END
+JDImageView.java
+K 25
+svn:wc:ra_dav:version-url
+V 110
+/mobile/JdAppAndroid/!svn/ver/5317/branches/androidJd-main/src/com/jingdong/app/mall/utils/ui/JDImageView.java
+END
+JDGallery.java
+K 25
+svn:wc:ra_dav:version-url
+V 108
+/mobile/JdAppAndroid/!svn/ver/5055/branches/androidJd-main/src/com/jingdong/app/mall/utils/ui/JDGallery.java
+END

@@ -1,0 +1,52 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="45dp" >
+
+    <ImageView
+        android:id="@+id/titleBg"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:background="@drawable/tmall_bar_segmentation" />
+
+    <TextView
+        android:id="@+id/titleRightButton"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:layout_gravity="center_vertical"
+        android:layout_marginRight="10dp"
+        android:background="@drawable/refresh" 
+        >
+    </TextView>
+
+    <RelativeLayout
+        android:id="@+id/select_category_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="fill_parent"
+        android:layout_centerInParent="true" >
+
+        <TextView
+            android:id="@+id/titleText"
+            style="@style/layout_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_gravity="center_vertical"
+            android:layout_toLeftOf="@id/titleRightButton"
+            android:padding="7dp"
+            android:singleLine="true"
+            android:text="精品推荐" >
+        </TextView>
+
+        <TextView
+            android:id="@+id/titledownarrow"
+            android:layout_width="15dp"
+            android:layout_height="15dp"
+            android:layout_centerVertical="true"
+            android:layout_toRightOf="@id/titleText"
+            android:background="@drawable/down_arrow" >
+        </TextView>
+    </RelativeLayout>
+
+</RelativeLayout>

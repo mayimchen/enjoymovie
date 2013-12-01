@@ -1,0 +1,726 @@
+package com.jingdong.app.mall.constant;
+
+import java.lang.ref.SoftReference;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.widget.RadioButton;
+
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.entity.CartTable;
+import com.jingdong.app.mall.entity.DefaultEasyTempOrderInfo;
+import com.jingdong.app.mall.entity.InvoiceInfo;
+import com.jingdong.app.mall.entity.JdCartInfo;
+import com.jingdong.app.mall.entity.PacksTable;
+import com.jingdong.app.mall.entity.PaymentInfo;
+import com.jingdong.app.mall.entity.Product;
+import com.jingdong.app.mall.entity.SourceEntity;
+import com.jingdong.app.mall.entity.UserInfo;
+import com.jingdong.app.mall.entity.YouHuiQuan;
+import com.jingdong.app.mall.shopping.ShoppingCarActivity;
+import com.jingdong.app.mall.utils.DBHelperUtil;
+import com.jingdong.app.mall.utils.HttpGroup;
+import com.jingdong.app.mall.utils.HttpGroup.HttpError;
+import com.jingdong.app.mall.utils.HttpGroup.HttpResponse;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSetting;
+import com.jingdong.app.mall.utils.ImageUtil;
+import com.jingdong.app.mall.utils.ImageUtil.InputWay;
+import com.jingdong.app.mall.utils.JSONArrayPoxy;
+import com.jingdong.app.mall.utils.JSONObjectProxy;
+import com.jingdong.app.mall.utils.Log;
+import com.jingdong.app.mall.utils.MyActivity;
+import com.jingdong.app.mall.utils.frame.ScrollableTabActivity;
+
+/**
+ * @author hesong
+ * 
+ *         Time: 2010-12-26 上午10:06:36
+ * 
+ *         Name: Contants
+ * 
+ * 
+ * 
+ *         Description: 系统全局的一些变量和函数
+ */
+public class Constants {
+
+	public static final String JD_SHARE_PREFERENCE_PROVINCE_ID_MODE_1 = "PROVINCE_ID_MODE_1";
+	public static final String JD_SHARE_PREFERENCE_CITY_ID_MODE_1 = "CITY_ID_MODE_1";
+
+	static AlertDialog alertDialog = null;
+	
+	public static final String HTTP_PREFIX = "http://";
+
+	public final static String JD_SHARE_PREFERENCE = "jdAndroidClient";// 默认shared prefernce文件名
+	public final static String FEEDBACK_CONTACTS = "FEEDBACKER_CONTACT";// 保存反馈者上一次输入的联系方式的key
+	public final static String LASTE_MESSAGE_READ_TIME = "lasteMessageReadeTime";// 站内消息最后阅读时间
+	public final static String SERVICE_TO_ACTIVIATE_MESSAGE = "message";// 从service传值到Acitivate的msgId;
+	public final static String POST_TO_CONFIRM_SUCCESS_FLAG = "post_order_confrim_flag";
+	public final static String ADD_SHORT_CUT_FLAG = "add_short_cut_flag";// 标识是否第一次启动
+	public final static String JD_WIDGET_DELETED_FLAG = "jd_widget_deleted";// 桌面上是否还widget,用来确定是否要结束掉service进程
+	public final static String ENCRYPT_KEY = "jd_key4";// 保存秒杀KEY，为了安全，此关键字名无意义
+
+	public static final String SHARED_PREFERENCES_CAMERA_DIR = "cameraFilePath";// SharedPreferences参数：存储的临时摄像头图片路径
+	public static final String SHARED_PREFERENCES_CAMERA_PHOTO_TYPE = "photoType";// SharedPreferences参数：存储的临时图片类型数组
+	public static final String SHARED_PREFERENCES_CAMERA_PHOTO_INDEX = "photoTypeIndex";// SharedPreferences参数：存储的临时图片类型数组下标
+
+	public static final String SHARED_PREFERENCES_REACTIVATION_ALARM_TRIGGER_AT_TIME = "reActivationTriggerAtTime";// 消息获取时钟值：毫秒
+	public static final String SHARED_PREFERENCES_REACTIVATION_INTERVAL_DAYS = "remindertime";// 沉默用户最大间隔时间：天，此值与服务器下发serverConfig接口内关键字一至
+	public static final int NOT_NOTIFICATION_HOUR_MIN = 9;// 免打扰时间,早上9点
+	public static final int NOT_NOTIFICATION_HOUR_MAX = 21;// 晚上21点
+	public static final int MESSAGE_TYPE_REACTIVATION = 4;// 显示消息界面用到的类型：激活沉默用户
+
+	// public static final String SHARED_PREFERENCES_CURRENT_PUSH_MSG_TASK_TIME = "currentPushMsgTaskTime";//当前设置闹钟的时间
+	public static final String SHARED_PREFERENCES_NEXT_PUSH_MSG_TASK_DELAY_TIME = "nextPushMsgTaskDelayTime";// 下次去拉去的延迟时间
+	// public static final String SHARED_PREFERENCES_NEXT_PUSH_MSG_TASK_HAS_RUNIING = "nextPushMsgTaskHasRunning";//是否有一个闹钟正在运行
+	public static final String SHARED_PREFERENCES_NEXT_PUSH_MSG_TASK_TIME = "nextPushMsgTaskTime";// 下一次闹钟的启动时间
+
+	public static final String SHARED_PREFERENCES_MSG_AUTO_UN_PUSH_TIME_KEY = "msg_auto_update_switch";// 不需要消息推送的key
+	public static final String SHARED_PREFERENCES_MSG_DEVICE_TOKEN = "msg_auto_device_token";// 消息推送设备token
+	public static final String SHARED_PREFERENCES_MSG_HAS_BIND = "msg_auto_has_bind";// 消息推送用户绑定token
+
+	// 消息系统关键性日志——————————————————————————————————————————————————————————————————————————
+	public static final String SHARED_PREFERENCES_LOG_MSG_UNREAD_IDS = "log_push_msg_unread_msg_ids";// 保存未读的消息id 消息推送关键日志
+	public static final String SHARED_PREFERENCES_LOG_MSG_NOTIFY_ID_AND_TIME = "log_push_msg_notify_id_and_time";// 保存最后通知的消息id与时间   消息推送关键日志
+
+
+	public static final String ASSETS_CACHE_DIRECT_NAME = "jdcache";// assets上缓存目录名称
+
+	//
+	public static int LOG_IN = 1;// 登录状态
+	public static int LOG_OFF = 0;// 登出状态
+	public static int MAX_LATEST_VISITED_PRODUCT = 20;
+	public static int MAX_IMG_URL_CACHE_LIST = 20;
+	public static int MAX_DISCUSS_TEXT_LENGTH = 200;
+	public static int MAX_CART_PROD_COUNT = 50;// 一次购买的产品种类树
+	public static int MAX_SINGLE_PROD_COUNT = 1000;// 一次购买的产品总数
+	public static String REN_MIN_BI = "¥";// 人民币符号
+	public static boolean hasNewTocart = false;// 是否有添加了新产品到购物车
+	public static boolean hasLogIn = false;// 是否登录
+	public static int bQuan;
+	public static JdCartInfo mCartInfoHuiZong;
+	public static String dTotalPrice = "0";
+	public static String dYTotalPrice = "0";
+	public static boolean hasNewway = false;
+	public static boolean jdSwitch = false;
+	public static boolean jSelected = false;
+	public static boolean dSelected = false;
+	public static boolean liSelected = false;
+	public static boolean noDong = false;
+	public static boolean noJing = false;
+	public static boolean noLi = false;
+	public static boolean bNoYouHui = false;
+	/**
+	 * 送货前电话确认
+	 */
+	public static boolean bPhone = false;
+	public static boolean addNewTemplate = false;
+	public static final String LOGIN_FLAG = "login";
+	public static final String SHOW_COST = "showCost";
+	public static RadioButton oldBtn = null;
+	public static JSONArray liSelArray = null, jinSelArray = null;
+	public static JSONObject dongSel = null;
+	public static ArrayList<Map<String, String>> item;
+	public static ArrayList<String> nselectJingQuanIDs = null, nSelectLipinIDs = null;
+	public static String nSelectDongQuanId = null;
+	public static long easyBuyProdId;
+	public static long packMainProdId;// 套装主商品ID
+	public static int mMaxCount = 0;
+
+	public static String nPayway;
+	// 轻松购开关
+	public static boolean bEasyBuy = false;// 轻松购二次确认
+	public static boolean bAddEasyBuy = false;// 添加轻松购
+	public static boolean bModifyEasyBuy = false;// 修改轻松购
+	static boolean ret = false;
+	public static JSONObject jbOrderNum = null;
+	public static JSONArrayPoxy skusOfSuites;// 购物车的时候准备好，属于套装的所有商品的ID，下单的时候用到
+
+	public static UserInfo mModifiedUserInfo;
+	public static PaymentInfo mModifiedPaymentInfo;
+	public static InvoiceInfo mModifiedInvoiceInfo;
+	public static YouHuiQuan mModifiedYouhuiQuan;
+	public static JSONObject jbProvinces = new JSONObject(), jbCitys = new JSONObject(), jbAreas = new JSONObject();
+	// public static String mNewRemark;
+
+	// public static boolean remember_user = false;
+	public static HashMap<String, SoftReference<Drawable>> gStrImgUrlCache = new HashMap<String, SoftReference<Drawable>>();
+	private static Intent gIntent = new Intent();
+	
+	public static final int PLATFORM = 100;
+
+	public static final String JLOG_PAGEID_ANDROID_PHONE = "android_jd_";
+	public static final String JLOG_SEARCH_PARAM_KEY = "searchKeyWord";
+	public static final String JLOG_CATEGORYID_PARAM_KEY = "caretoryId";
+	public static final String JLOG_ORDERID_PARAM_KEY = "orderId";
+	public static final String JLOG_PRODUCT_PARAM_KEY = "productId";
+	public static final String JLOG_ACTIVITYNAME_PARAM_KEY = "activityName";
+	
+	
+	// HashMap<String, SoftReference<Drawable>>
+	public static void setTransferIntentGlobal(final Intent it) {
+		try {
+			gIntent.putExtras(it);
+		} catch (Exception e) {
+			if (Log.D) {
+				Log.d("global intent error", e.getMessage());
+			}
+		}
+	}
+
+	public static Intent getGlobalIntent() {
+		return gIntent == null ? null : gIntent;
+	}
+
+	public static void appendImgCacheList(final String sImgUrl, MyActivity myAactivity, int length) {
+
+		if (sImgUrl.length() > 0 && gStrImgUrlCache.size() < 20 && !gStrImgUrlCache.containsKey(sImgUrl)) {
+			// gStrImgUrlCache.offer(sImgUrl);
+			HttpGroup imageHttpGroup = myAactivity.getHttpGroupaAsynPool();
+			Map<String, String> paramMap = null;
+			imageHttpGroup.add(sImgUrl, paramMap, new HttpGroup.OnAllListener() {
+
+				@Override
+				public void onStart() {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void onEnd(HttpResponse httpResponse) {
+					Bitmap bitmap = ImageUtil.createBitmap(InputWay.createInputWay(httpResponse), 0, 0);
+					gStrImgUrlCache.put(sImgUrl, new SoftReference<Drawable>(new BitmapDrawable(bitmap)));// 全局图片内存缓存
+				}
+
+				@Override
+				public void onError(HttpError error) {
+					// TODO Auto-generated method stub
+
+				}
+
+				@Override
+				public void onProgress(int max, int progress) {
+					// TODO Auto-generated method stub
+
+				}
+
+			});
+		}
+	}
+
+	public static void clearOrderInfo() {
+		liSelArray = new JSONArray();
+		jinSelArray = new JSONArray();
+		dongSel = new JSONObject();
+		nselectJingQuanIDs = new ArrayList<String>();
+		nSelectLipinIDs = new ArrayList<String>();
+		nSelectDongQuanId = null;
+		Constants.bNoYouHui = false;
+		Constants.dSelected = false;
+		Constants.liSelected = false;
+		Constants.jSelected = false;
+		Constants.skusOfSuites = null;
+		Constants.skusOfSuites = new JSONArrayPoxy();
+	}
+
+	public static String StringFilter(String str) {
+		String regEx = "[`~!@#$%^&*()+=|{}':;',\\[\\].<>/?~！@#￥%……& amp;*（）——+|{}【】‘；：”“’。，、？]";
+		Pattern p = Pattern.compile(regEx);
+		Matcher m = p.matcher(str);
+		return m.replaceAll("").trim();
+	}
+
+	public static Drawable popImgUrlFromCache(final String sImgUrl) {
+
+		if (gStrImgUrlCache.size() > 0 && gStrImgUrlCache.containsKey(sImgUrl)) {
+			SoftReference<Drawable> softReference = gStrImgUrlCache.get(sImgUrl);
+			Drawable drawable = softReference.get();
+
+			return drawable;
+
+		} else {
+			return null;
+		}
+
+	}
+
+	public static boolean canBuyProduct(final Product prod, final MyActivity actvity, final DBHelperUtil dbService, final SourceEntity sourceEntity) {
+
+		// 参数
+		JSONObject params = new JSONObject();
+		try {
+			params.put("skuId", "" + prod.getId());
+		} catch (JSONException e1) {
+			e1.printStackTrace();
+		}
+
+		ScrollableTabActivity.isCanOnTouch = false;
+		actvity.getHttpGroupaAsynPool().add("canBuy", params, new HttpGroup.OnAllListener() {
+			@Override
+			public void onProgress(int max, int progress) {
+			}
+
+			@Override
+			public void onError(HttpError error) {
+				ScrollableTabActivity.isCanOnTouch = true;
+
+			}
+
+			@Override
+			public void onEnd(final HttpResponse httpResponse) {
+				try {
+					JSONObject result = httpResponse.getJSONObject();
+					if (result != null && result.toString().contains("canBuy") && result.get("canBuy") != null && result.get("canBuy").toString() != "null" && result.toString().contains("Flag")) {
+						if (result.getJSONObject("canBuy").getBoolean("Flag")) {
+							ret = true;
+							CartTable ct = dbService.queryCartByProductId(prod.getId());
+
+							mMaxCount = dbService.getCartList().size();
+							if (ct != null) {
+								// 修改时忽略当前订单来源
+								dbService.updateCart(prod.getId(), prod.getName(), (ct.buyCount + 1));
+
+							} else {
+								if (mMaxCount > 50) {
+									ShowMsg(actvity.getString(R.string.product_num_out), actvity);
+									return;
+								} else {
+									dbService.insertCart(prod.getId(), prod.getName(), 1, sourceEntity.getSourceType(), sourceEntity.getSourceValue());
+								}
+
+							}
+
+						} else {
+							if (result.getJSONObject("canBuy").get("Message") != null && result.getJSONObject("canBuy").get("Message").toString() != "null") {
+								ShowMsg(result.getJSONObject("canBuy").get("Message").toString(), actvity);
+							} else {
+								ShowMsg(actvity.getString(R.string.alert_message_canot_buy), actvity);
+							}
+						}
+					} else {
+						ShowMsg(actvity.getString(R.string.alert_message_canot_buy), actvity);
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+
+				ScrollableTabActivity.isCanOnTouch = true;
+
+			}
+
+			@Override
+			public void onStart() {
+				// TODO Auto-generated method stub
+
+			}
+
+		});
+		return ret;
+	}
+
+	@SuppressWarnings("deprecation")
+	public static boolean canBuyProduct(final long id, final String provinceValue, final Product prod, final MyActivity actvity, final DBHelperUtil dbService, final SourceEntity sourceEntity) {
+
+		if (!canAddToCart(id, dbService, actvity)) {
+			// Toast.makeText(actvity, "您购买的商品已达50种，一次性购买不能超过50种商品",
+			// Toast.LENGTH_SHORT).show();
+			ShowMsg(actvity.getString(R.string.product_num_out), actvity);
+			return false;
+		} else {
+			// DBHelperUtil dbService = new
+			// DBHelperUtil(PacksListActivity.this);
+			ArrayList<CartTable> cart = dbService.getCartList();
+			ArrayList<PacksTable> packs = dbService.getPacksList();
+
+			int count = 0;
+			if (cart != null && cart.size() != 0) {
+				for (int i = 0; i < cart.size(); i++) {
+					count += cart.get(i).buyCount;
+				}
+			}
+
+			if (packs != null && packs.size() != 0) {
+				for (int i = 0; i < packs.size(); i++) {
+					count += (packs.get(i).buyCount * packs.get(i).childCount);
+				}
+			}
+			if (count >= 1000) {
+				Constants.ShowMsg(actvity.getString(R.string.too_many_prods), actvity);
+				return false;
+			}
+		}
+		// 参数
+		JSONObject params = new JSONObject();
+		try {
+			params.put("skuId", "" + id);
+		} catch (JSONException e1) {
+			e1.printStackTrace();
+		}
+		ScrollableTabActivity.isCanOnTouch = false;
+		HttpSetting httpSetting = new HttpGroup.HttpSetting();
+		httpSetting.setFunctionId("canBuy");
+		httpSetting.setJsonParams(params);
+		httpSetting.setListener(
+		// actvity.getHttpGroupaAsynPool().add("canBuy", params,
+				new HttpGroup.OnAllListener() {
+					@Override
+					public void onProgress(int max, int progress) {
+					}
+
+					@Override
+					public void onError(HttpError error) {
+						ScrollableTabActivity.isCanOnTouch = true;
+					}
+
+					@Override
+					public void onEnd(final HttpResponse httpResponse) {
+						try {
+							JSONObject result = httpResponse.getJSONObject();
+							if (result != null && result.toString().contains("canBuy") && result.get("canBuy") != null && result.get("canBuy").toString() != "null" && result.toString().contains("Flag")) {
+								if (result.getJSONObject("canBuy").getBoolean("Flag")) {
+									ret = true;
+
+									if (!Constants.bEasyBuy) {
+										addToShoopingCart(id, provinceValue, prod, actvity, dbService, sourceEntity);
+									} else {
+										// canEasyBuyWare(id,actvity);
+										DefaultEasyTempOrderInfo.getDefaultOrderInfo(actvity, sourceEntity);
+									}
+								} else {
+									if (result.getJSONObject("canBuy").get("Message") != null && result.getJSONObject("canBuy").get("Message").toString() != "null") {
+										ShowMsg(result.getJSONObject("canBuy").get("Message").toString(), actvity);
+									} else {
+										ShowMsg(actvity.getString(R.string.alert_message_canot_buy), actvity);
+									}
+								}
+							} else {
+								ShowMsg(actvity.getString(R.string.alert_message_canot_buy), actvity);
+							}
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+
+						ScrollableTabActivity.isCanOnTouch = true;
+
+					}
+
+					@Override
+					public void onStart() {
+						// TODO Auto-generated method stub
+
+					}
+
+				});
+
+		httpSetting.setNotifyUser(true);
+		actvity.getHttpGroupaAsynPool().add(httpSetting);
+		return ret;
+	}
+
+	public static void ShowMsg(final String msg, final MyActivity actvity) {
+		actvity.post(new Runnable() {
+
+			@Override
+			public void run() {
+				AlertDialog.Builder builder = new AlertDialog.Builder(actvity);
+				builder.setTitle(R.string.prompt);
+				builder.setMessage(msg);
+				builder.setNeutralButton(R.string.ok, new OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						dialog.dismiss();
+					}
+				});
+				builder.show();
+			}
+
+		});
+	}
+
+	public static void addToShoopingCart(final long id, String provinceValue, final Product prod, final MyActivity actvity, final DBHelperUtil dbService, final SourceEntity sourceEntity) {
+
+		String provinceStockContent = prod.getProvinceStockContent();
+		Boolean provinceStockFlag = prod.getProvinceStockFlag();
+		if (provinceStockContent != null && provinceStockFlag != null) {
+
+			localCheck(id, prod, actvity, dbService, provinceStockContent, provinceStockFlag, sourceEntity);
+
+			return;
+		}
+
+		// 参数
+		JSONObject params = new JSONObject();
+		try {
+			params.put("skuId", "" + id);
+			params.put("provinceId", provinceValue);
+		} catch (JSONException e1) {
+			e1.printStackTrace();
+		}
+
+		ScrollableTabActivity.isCanOnTouch = false;
+		actvity.getHttpGroupaAsynPool().add("stock", params, new HttpGroup.OnAllListener() {
+			@Override
+			public void onProgress(int max, int progress) {
+			}
+
+			@Override
+			public void onError(HttpError error) {
+				ScrollableTabActivity.isCanOnTouch = true;
+			}
+
+			@Override
+			public void onEnd(final HttpResponse httpResponse) {
+
+				JSONObjectProxy result = httpResponse.getJSONObject();
+				if (result != null) {
+					localCheck(id, prod, actvity, dbService, result.getStringOrNull("stockStatus"), result.getBooleanOrNull("flag"), sourceEntity);
+				} else {
+					Constants.ShowMsg("加入购物车失败", actvity);
+				}
+				// if(Contants.bEasyBuy)
+				// {
+				// easyBuyProdId = id;
+				// DefaultEasyTempOrderInfo.getDefaultOrderInfo(actvity);
+				// }
+
+				ScrollableTabActivity.isCanOnTouch = true;
+			}
+
+			@Override
+			public void onStart() {
+				// TODO Auto-generated method stub
+
+			}
+
+		});
+
+	}
+
+	// putStringToPreference("easyBuySwitch", easyBuySwitch);
+	// putStringToPreference("easyBuyConfirm", easyBuyConfirm);
+	public static boolean canSeeEasyBuyBtn(MyActivity actvity) {
+		if (actvity != null && actvity.getStringFromPreference("easyBuySwitch") != null && actvity.getStringFromPreference("easyBuySwitch").compareTo("1") == 0) {
+			return true;
+		}
+		return false;
+	}
+
+	public static boolean shouldConfirmEasyBuy(MyActivity actvity) {
+		if (actvity.getStringFromPreference("easyBuyConfirm").compareTo("1") == 0) {
+			return true;
+		}
+		return false;
+	}
+
+	// public static void canEasyBuyWare(final long id, final MyActivity actvity) {
+	// JSONObject params = new JSONObject();
+	// try {
+	// params.put("wareId", "" + id);
+	// } catch (JSONException e1) {
+	// e1.printStackTrace();
+	// }
+	//
+	// actvity.getHttpGroupaAsynPool().add("easyBuySwitch", params,
+	// new HttpGroup.OnAllListener() {
+	// @Override
+	// public void onProgress(int max, int progress) {
+	// }
+	//
+	// @Override
+	// public void onError(HttpError error) {
+	//
+	// }
+	//
+	// @Override
+	// public void onEnd(final HttpResponse httpResponse) {
+	//
+	// JSONObject result = httpResponse.getJSONObject();
+	// try {
+	// if (result != null
+	// && result.toString().contains("easyBuy")) {
+	// if (result.getString("easyBuy") != null
+	// && result.getString("easyBuy")
+	// .compareTo("true") == 0) {
+	// DefaultEasyTempOrderInfo
+	// .getDefaultOrderInfo(actvity);
+	// } else {
+	// ShowMsg(actvity
+	// .getString(R.string.product_canot_easy_buy),
+	// actvity);
+	// }
+	// }
+	// } catch (Exception e) {
+	// e.printStackTrace();
+	// }
+	//
+	// }
+	//
+	// @Override
+	// public void onStart() {
+	// // TODO Auto-generated method stub
+	//
+	// }
+	//
+	// });
+	//
+	// }
+
+	public static void canAddToCart(Product prod, DBHelperUtil dbService, MyActivity actvity, final SourceEntity sourceEntity) {
+
+		canBuyProduct(prod, actvity, dbService, sourceEntity);
+	}
+
+	public static boolean canAddToCart(long id, DBHelperUtil dbService, MyActivity actvity) {
+		CartTable ct = dbService.queryCartByProductId(id);
+		mMaxCount = dbService.getCartList().size();
+		if (ct == null) {
+
+			if (mMaxCount >= 50) {
+
+				return false;
+			}
+		}
+
+		return true;
+		// if(Contants.bEasyBuy)
+	}
+
+	public static void localCheck(final long id, final Product prod, final MyActivity actvity, final DBHelperUtil dbService, String result, Boolean flag, final SourceEntity sourceEntity) {
+
+		if (null == flag) {
+			flag = false;
+		}
+		if (result == null || flag == false) {
+			actvity.runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					ShowMsg(actvity.getString(R.string.product_no_stock), actvity);
+				}
+			});
+
+		} else {
+			actvity.runOnUiThread(new Runnable() {
+				@Override
+				public void run() {
+					// ImageButton cartButton = (ImageButton)
+					// findViewById(R.id.product_cart_button);
+					if (prod.getJdPrice().toString().contains("暂无报价")) {
+
+						ShowMsg(actvity.getString(R.string.product_canot_add_to_car), actvity);
+					} else {
+						Constants.hasNewTocart = true;
+						boolean addSucceed = true;
+						CartTable ct = dbService.queryCartByProductId(id);
+						if (ct != null) {
+							// 如果购物车里含有和秒杀相同的产品，就不能秒杀
+							if (prod.getMiaoSha()) {
+								addSucceed = false;
+								final AlertDialog.Builder builder = new AlertDialog.Builder(actvity);
+								builder.setMessage(R.string.limit_buy_product_message);
+								builder.setNegativeButton(R.string.limit_buy_product_know, new DialogInterface.OnClickListener() {
+
+									@Override
+									public void onClick(DialogInterface dialog, int which) {
+										dialog.dismiss();
+									}
+								});
+								actvity.post(new Runnable() {
+
+									@Override
+									public void run() {
+										alertDialog = builder.show();
+									}
+								});
+							} else { // 不是秒杀产品
+								// 修改时忽略当前订单来源
+								dbService.updateCart(id, prod.getName(), (ct.buyCount + 1));
+							}
+
+						} else {
+							// ArrayList<CartTable> list =
+							// dbService.getCartList();
+							// mMaxCount = list.size();
+							// list =null;
+							// if(mMaxCount>50)
+							// {
+							// Toast.makeText(actvity,
+							// "您购买的商品已达50种，一次性购买不能超过50种商品",
+							// Toast.LENGTH_SHORT).show();
+							// return;
+							// }
+							dbService.insertCart(id, prod.getName(), 1, sourceEntity.getSourceType(), sourceEntity.getSourceValue());
+						}
+						// if(Contants.bEasyBuy)
+						// {
+						// easyBuyProdId = id;
+						// DefaultEasyTempOrderInfo.getDefaultOrderInfo(actvity);
+						// }
+						// Toast.makeText(actvity, "加入购物车成功", 500).show();
+						// if(!Contants.bEasyBuy)
+						if (addSucceed) {
+							final AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(actvity);
+							alertDialogBuilder.setTitle(R.string.product_add_title);
+							alertDialogBuilder.setMessage(R.string.product_add_message);
+							alertDialogBuilder.setPositiveButton(R.string.product_add_positive, new DialogInterface.OnClickListener() {
+
+								@Override
+								public void onClick(DialogInterface arg0, int arg1) {
+
+									Intent intent = new Intent(actvity, ShoppingCarActivity.class);
+									/**
+									 * 修改了从商品详情到购物车，不亮灯问题及购物车数量不同步问题
+									 */
+									intent.putExtra(ScrollableTabActivity.SINGLE_INSTANCE_FLAG, true);// 单例模式 modified by
+									// zhangjunping
+									// 2011/3/9 10:26
+									intent.putExtra(ScrollableTabActivity.NAVIGATION_FLAG, true);
+									intent.putExtra(ScrollableTabActivity.NAVIGATION_ID, ScrollableTabActivity.NAVIGATION_SHOPPINGCAR);
+									actvity.startActivityInFrame(intent);
+									alertDialog.dismiss();
+
+								}
+
+							});
+
+							alertDialogBuilder.setNegativeButton(R.string.product_add_negative, new DialogInterface.OnClickListener() {
+
+								@Override
+								public void onClick(DialogInterface dialog, int which) {
+
+									alertDialog.dismiss();
+								}
+
+							});
+							actvity.post(new Runnable() {
+								@Override
+								public void run() {
+									alertDialog = alertDialogBuilder.show();
+								}
+
+							});
+						}
+
+					}
+
+				}
+			});
+
+		}
+	}
+
+}

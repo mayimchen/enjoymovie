@@ -1,0 +1,334 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="335dp"
+    android:orientation="horizontal" >
+
+    <LinearLayout
+        android:id="@+id/flight_left_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:orientation="vertical"
+        android:padding="5dp" >
+
+        <!-- android:background="@color/blue" -->
+
+        <TextView
+            android:id="@+id/item_flight_name"
+            android:layout_width="wrap_content"
+            android:layout_height="20dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="3dp"
+            android:singleLine="true"
+            android:text="北京-三亚"
+            android:textSize="17sp" />
+
+        <RelativeLayout
+            android:id="@+id/item_describe_layout"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:padding="3dp" >
+
+            <TextView
+                android:id="@+id/all_price_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:layout_marginLeft="15dp"
+                android:layout_marginTop="3dp"
+                android:singleLine="true"
+                android:gravity="center_vertical"
+                android:text="共计："
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/all_price_tv_content"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:layout_marginLeft="5dp"
+                android:layout_marginTop="3dp"
+                android:layout_toRightOf="@id/all_price_tv"
+                android:singleLine="true"
+                android:gravity="center_vertical"
+                android:text="2000"
+                android:textSize="17sp" />
+
+            <Button
+                android:id="@+id/setResult_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:layout_marginLeft="5dp"
+                android:layout_marginTop="3dp"
+                android:singleLine="true"
+                android:text="加入行程表" />
+            <TextView
+                android:id="@+id/item_date_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="20dp"
+                android:layout_below="@id/all_price_tv"
+                android:layout_marginLeft="15dp"
+                android:layout_marginTop="3dp"
+                android:singleLine="true"
+                android:text="日期"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/item_describe_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="20dp"
+                android:layout_below="@id/item_date_tv"
+                android:layout_marginLeft="15dp"
+                android:layout_marginTop="3dp"
+                android:singleLine="true"
+                android:text="适用："
+                android:textSize="17sp" />
+        </RelativeLayout>
+
+        <RelativeLayout
+            android:id="@+id/goto_heahd_layout"
+            android:layout_height="20dp"
+            android:layout_width="fill_parent">
+
+            <TextView
+                android:id="@+id/goto_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="20dp"
+                android:layout_marginLeft="1dp"
+                android:singleLine="true"
+                android:text="去程"
+                android:textSize="17sp" />
+                <!-- 去程(HU7179)： -->
+            <TextView
+                android:id="@+id/goto_subclass_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="20dp"
+                android:layout_marginLeft="10dp"
+                android:layout_toRightOf="@id/goto_tv"
+                android:singleLine="true"
+                android:text=""
+                android:textSize="17sp" />
+            <!-- 经济舱 -->
+        </RelativeLayout>
+
+        <!--
+                  <TextView
+                android:id="@+id/goto_flightcontent_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="20dp"
+                android:layout_centerVertical="true"
+                android:layout_marginLeft="1dp"
+                android:singleLine="true"
+                android:text="(HU7179)"
+                android:textSize="17sp" />
+        -->
+
+        <RelativeLayout
+            android:id="@+id/goto_item_layout"
+            android:layout_width="fill_parent"
+            android:layout_height="80dp"
+            android:padding="3dp" >
+
+            <RelativeLayout
+                android:id="@+id/goto_airport_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="37dp"
+                android:layout_centerHorizontal="true"
+                android:padding="3dp" >
+
+                <TextView
+                    android:id="@+id/goto_to_iv1"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_centerInParent="true"
+                    android:background="@drawable/flight_to_button"
+                    />
+                
+                <TextView
+                    android:id="@+id/goto_depart_airport_tv"
+                    android:layout_width="fill_parent"
+                    android:layout_height="20dp"
+                    android:singleLine="true"
+                    android:gravity="center"
+                    android:layout_alignParentLeft="true"
+                    android:layout_toLeftOf="@id/goto_to_iv1"
+                    android:layout_centerVertical="true"
+                    android:layout_marginLeft="8dp"
+                    android:text=""
+                    android:textSize="17sp" />
+                <!-- 白云机场 -->
+                <TextView
+                    android:id="@+id/goto_arrive_ariport_tv"
+                    android:layout_width="fill_parent"
+                    android:layout_height="20dp"
+                    android:gravity="center"
+                    android:layout_alignParentRight="true"
+                    android:layout_toRightOf="@id/goto_to_iv1"
+                    android:layout_centerVertical="true"
+                    android:layout_marginRight="8dp"
+                    android:singleLine="true"
+                    android:text="" />
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/goto_time_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="37dp"
+                android:layout_below="@id/goto_airport_layout"
+                android:layout_toRightOf="@id/goto_tv"
+                android:padding="3dp" >
+
+                
+                 <TextView
+                    android:id="@+id/goto_to_iv2"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_centerInParent="true"
+                    android:background="@drawable/flight_to_button"
+                    />
+                
+                <TextView
+                    android:id="@+id/goto_depart_time_tv"
+                    android:layout_width="fill_parent"
+                    android:layout_height="20dp"
+                    android:layout_marginLeft="8dp"
+                    android:singleLine="true"
+                    android:gravity="center"
+                    android:layout_toLeftOf="@id/goto_to_iv2"
+                    android:layout_centerVertical="true"
+                    android:text=""
+                    android:textSize="17sp" />
+
+               
+
+                <TextView
+                    android:id="@+id/goto_arrive_time_tv"
+                    android:layout_width="fill_parent"
+                    android:layout_height="20dp"
+                    android:layout_toRightOf="@id/goto_to_iv2"
+                    android:layout_centerVertical="true"
+                    android:gravity="center"
+                    android:layout_alignParentRight="true"
+                    android:layout_marginRight="8dp"
+                    android:singleLine="true"
+                    android:text="" />
+            </RelativeLayout>
+        </RelativeLayout>
+
+        
+        
+        <RelativeLayout
+            android:id="@+id/goback_heahd_layout"
+            android:layout_height="20dp"
+            android:layout_width="fill_parent">
+
+            <TextView
+            android:id="@+id/goback_tv"
+            android:layout_width="wrap_content"
+            android:layout_height="20dp"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="1dp"
+            android:singleLine="true"
+            android:text="返程"
+            android:textSize="17sp" />
+            <!-- (HU7180)： -->
+            <TextView
+                android:id="@+id/goback_subclass_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="20dp"
+                android:layout_marginLeft="10dp"
+                android:layout_toRightOf="@id/goback_tv"
+                android:singleLine="true"
+                android:text=""
+                android:textSize="17sp" />
+                <!-- 经济舱 -->
+        </RelativeLayout>
+        
+        <RelativeLayout
+            android:id="@+id/goback_item_layout"
+            android:layout_width="fill_parent"
+            android:layout_height="80dp"
+            android:padding="3dp" >
+
+            <RelativeLayout
+                android:id="@+id/goback_airport_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="37dp"
+                android:layout_toRightOf="@id/goback_tv"
+                android:padding="3dp" >
+
+                 <TextView
+                    android:id="@+id/goback_to_iv1"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_centerInParent="true"
+                    android:background="@drawable/flight_to_button"
+                     />
+                
+                 
+                <TextView
+                    android:id="@+id/goback_depart_airport_tv"
+                    android:layout_width="fill_parent"
+                    android:layout_height="20dp"
+                    android:singleLine="true"
+                    android:gravity="center"
+                    android:layout_toLeftOf="@id/goback_to_iv1"
+                    android:layout_centerVertical="true"
+                    android:text=""
+                    android:textSize="17sp" />
+
+               
+                <TextView
+                    android:id="@+id/goback_arrive_ariport_tv"
+                    android:layout_width="fill_parent"
+                    android:layout_height="20dp"
+                    android:gravity="center"
+                    android:layout_toRightOf="@id/goback_to_iv1"
+                    android:layout_centerVertical="true"
+                    android:layout_alignParentRight="true"
+                    android:singleLine="true"
+                    android:text="" />
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/goback_time_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="37dp"
+                android:layout_below="@id/goback_airport_layout"
+                android:layout_toRightOf="@id/goback_tv"
+                android:padding="3dp" >
+
+                 <TextView
+                    android:id="@+id/goback_to_iv2"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_centerInParent="true"
+                    android:background="@drawable/flight_to_button"
+                     />
+                
+                <TextView
+                    android:id="@+id/goback_depart_time_tv"
+                    android:layout_width="fill_parent"
+                    android:layout_height="20dp"
+                    android:layout_toLeftOf="@id/goback_to_iv2"
+                    android:layout_centerVertical="true"
+                    android:singleLine="true"
+                    android:gravity="center"
+                    android:text=""
+                    android:textSize="17sp" />
+
+              
+                <TextView
+                    android:id="@+id/goback_arrive_time_tv"
+                    android:layout_width="fill_parent"
+                    android:layout_height="20dp"
+                    android:layout_toRightOf="@id/goback_to_iv2"
+                    android:layout_centerVertical="true"
+                    android:gravity="center"
+                    android:layout_alignParentRight="true"
+                    android:singleLine="true"
+                    android:text="" />
+            </RelativeLayout>
+        </RelativeLayout>
+    </LinearLayout>
+
+</LinearLayout>

@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <include
+        android:id="@+id/vacation_filter_head"
+        layout="@layout/head" />
+
+    <LinearLayout
+        android:id="@+id/filter_main_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" >
+
+        <ScrollView
+            android:id="@+id/vacation_filter_scrollView"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content" >
+
+            <LinearLayout
+                android:id="@+id/vacation_filter_mainLayout"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="50dp"
+                android:orientation="vertical" >
+
+                <RelativeLayout
+                    android:id="@+id/vacation_start_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="55dp"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginRight="10dp"
+                    android:layout_marginTop="25dp"
+                    android:background="@drawable/background_corners" >
+
+                    <TextView
+                        android:id="@+id/vacation_starttime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="10dp"
+                        android:text="出发：" />
+
+                    <TextView
+                        android:id="@+id/vacation_starttime_content"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentRight="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginRight="18dp"
+                        android:text="2013-04-13" />
+
+                    <TextView
+                        android:id="@+id/vacation_startcity_content"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_marginRight="25dp"
+                        android:layout_toLeftOf="@id/vacation_starttime_content"
+                        android:text="" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/vacation_kind_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginRight="10dp"
+                    android:background="@drawable/background_corners" >
+
+                    <TextView
+                        android:id="@+id/vacation_kind"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="8dp"
+                        android:text="类型:" />
+
+                    <TextView
+                        android:id="@+id/vacation_kind_content"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentRight="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginRight="18dp"
+                        android:text="单人散心游" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/vacation_insterested_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginRight="10dp"
+                    android:background="@drawable/background_corners"
+                    android:clickable="true" >
+
+                    <TextView
+                        android:id="@+id/vacation_insterested_desc"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="10dp"
+                        android:text="心愿：" />
+                     <TextView
+                        android:id="@+id/vacation_insterested_tips"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerInParent="true"
+                        android:layout_marginLeft="10dp"
+                        android:text="点击添加心愿" 
+                        android:textColor="#cfff0000"
+                        android:visibility="gone"
+                        />
+                    <TextView
+                        android:id="@+id/vacation_insterested_add"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentRight="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginRight="20dp"
+                        android:background="@drawable/android_list_idex" />
+
+                    <TextView
+                        android:id="@+id/tag_tv1"
+                        android:layout_width="50dp"
+                        android:layout_height="20dp"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="8dp"
+                        android:layout_toRightOf="@id/vacation_insterested_desc"
+                        android:background="@drawable/tag_bg"
+                        android:gravity="center"
+                        android:text=""
+                        android:textSize="10dp" 
+                        android:visibility="gone"/>
+
+                    <TextView
+                        android:id="@+id/tag_tv2"
+                        android:layout_width="50dp"
+                        android:layout_height="20dp"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="5dp"
+                        android:layout_toRightOf="@id/tag_tv1"
+                        android:background="@drawable/tag_bg"
+                        android:gravity="center"
+                        android:text=""
+                        android:textSize="10dp"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/tag_tv3"
+                        android:layout_width="50dp"
+                        android:layout_height="20dp"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="5dp"
+                        android:layout_toRightOf="@id/tag_tv2"
+                        android:background="@drawable/tag_bg"
+                        android:gravity="center"
+                        android:text=""
+                        android:textSize="10dp" 
+                        android:visibility="gone"/>
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/vacation_target_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginRight="10dp"
+                    android:background="@drawable/background_corners" >
+
+                    <TextView
+                        android:id="@+id/vacation_wantto_place"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="10dp"
+                        android:text="想去的城市：" />
+
+                    <TextView
+                        android:id="@+id/vacation_wantto_place_content"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentRight="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginRight="18dp"
+                        android:text="全部" />
+                </RelativeLayout>
+
+                <RelativeLayout
+                    android:id="@+id/vacation_people_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginRight="10dp"
+                    android:background="@drawable/background_corners" >
+
+                    <TextView
+                        android:id="@+id/vacation_people"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="10dp"
+                        android:text="出行人：" />
+
+                    <TextView
+                        android:id="@+id/edit_vacation_people"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_alignParentRight="true"
+                        android:layout_centerVertical="true"
+                        android:layout_marginRight="5dp"
+                        android:background="@drawable/icon_edit" />
+
+                    <TextView
+                        android:id="@+id/del_vacation_people"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_centerVertical="true"
+                        android:layout_marginRight="5dp"
+                        android:layout_toLeftOf="@id/edit_vacation_people"
+                        android:background="@drawable/delete_icon2" />
+
+                    <LinearLayout
+                        android:id="@+id/vacation_people_content_layout"
+                        android:layout_width="fill_parent"
+                        android:layout_height="40dp"
+                        android:layout_marginLeft="2dp"
+                        android:layout_toLeftOf="@id/del_vacation_people"
+                        android:layout_toRightOf="@id/vacation_people"
+                        android:orientation="horizontal" >
+                    </LinearLayout>
+                </RelativeLayout>
+
+                <LinearLayout
+                    android:id="@+id/vacation_people_selector_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginTop="5dp"
+                    android:orientation="horizontal"
+                    android:visibility="gone" >
+
+                    <TextView
+                        android:id="@+id/selector_couple"
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:layout_marginLeft="20dp"
+                        android:background="@drawable/icon_couple" />
+
+                    <TextView
+                        android:id="@+id/selector_man"
+                        android:layout_width="25dp"
+                        android:layout_height="25dp"
+                        android:layout_marginLeft="5dp"
+                        android:layout_marginTop="4dp"
+                        android:background="@drawable/icon_man" />
+
+                    <TextView
+                        android:id="@+id/selector_woman"
+                        android:layout_width="25dp"
+                        android:layout_height="25dp"
+                        android:layout_marginLeft="5dp"
+                        android:layout_marginTop="3dp"
+                        android:background="@drawable/icon_woman" />
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
+
+</LinearLayout>

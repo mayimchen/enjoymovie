@@ -1,0 +1,455 @@
+K 25
+svn:wc:ra_dav:version-url
+V 90
+/mobile/JdAppAndroid/!svn/ver/5190/branches/androidJd-main/src/com/jingdong/app/mall/utils
+END
+JDMiaoSha.java
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/mobile/JdAppAndroid/!svn/ver/4704/branches/androidJd-main/src/com/jingdong/app/mall/utils/JDMiaoSha.java
+END
+ExceptionDrawable.java
+K 25
+svn:wc:ra_dav:version-url
+V 113
+/mobile/JdAppAndroid/!svn/ver/4530/branches/androidJd-main/src/com/jingdong/app/mall/utils/ExceptionDrawable.java
+END
+NoImageUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 108
+/mobile/JdAppAndroid/!svn/ver/4530/branches/androidJd-main/src/com/jingdong/app/mall/utils/NoImageUtils.java
+END
+FileUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/mobile/JdAppAndroid/!svn/ver/5180/branches/androidJd-main/src/com/jingdong/app/mall/utils/FileUtils.java
+END
+MultiTouchController.java
+K 25
+svn:wc:ra_dav:version-url
+V 116
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/MultiTouchController.java
+END
+NextPageLoader.java
+K 25
+svn:wc:ra_dav:version-url
+V 110
+/mobile/JdAppAndroid/!svn/ver/5208/branches/androidJd-main/src/com/jingdong/app/mall/utils/NextPageLoader.java
+END
+SelectedChangeListener.java
+K 25
+svn:wc:ra_dav:version-url
+V 118
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/SelectedChangeListener.java
+END
+NetUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 104
+/mobile/JdAppAndroid/!svn/ver/3700/branches/androidJd-main/src/com/jingdong/app/mall/utils/NetUtils.java
+END
+AssetsCacheUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 112
+/mobile/JdAppAndroid/!svn/ver/5052/branches/androidJd-main/src/com/jingdong/app/mall/utils/AssetsCacheUtils.java
+END
+FormatUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 107
+/mobile/JdAppAndroid/!svn/ver/2038/branches/androidJd-main/src/com/jingdong/app/mall/utils/FormatUtils.java
+END
+ApplicationUpgradeHelper.java
+K 25
+svn:wc:ra_dav:version-url
+V 120
+/mobile/JdAppAndroid/!svn/ver/3060/branches/androidJd-main/src/com/jingdong/app/mall/utils/ApplicationUpgradeHelper.java
+END
+HttpGroupUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 110
+/mobile/JdAppAndroid/!svn/ver/3111/branches/androidJd-main/src/com/jingdong/app/mall/utils/HttpGroupUtils.java
+END
+AdapterHelper.java
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/mobile/JdAppAndroid/!svn/ver/4603/branches/androidJd-main/src/com/jingdong/app/mall/utils/AdapterHelper.java
+END
+SimpleBeanAdapter.java
+K 25
+svn:wc:ra_dav:version-url
+V 113
+/mobile/JdAppAndroid/!svn/ver/5266/branches/androidJd-main/src/com/jingdong/app/mall/utils/SimpleBeanAdapter.java
+END
+URLParamMap.java
+K 25
+svn:wc:ra_dav:version-url
+V 107
+/mobile/JdAppAndroid/!svn/ver/2843/branches/androidJd-main/src/com/jingdong/app/mall/utils/URLParamMap.java
+END
+CPAUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 104
+/mobile/JdAppAndroid/!svn/ver/1523/branches/androidJd-main/src/com/jingdong/app/mall/utils/CPAUtils.java
+END
+ShortCutUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/mobile/JdAppAndroid/!svn/ver/4984/branches/androidJd-main/src/com/jingdong/app/mall/utils/ShortCutUtils.java
+END
+IGestureListener.java
+K 25
+svn:wc:ra_dav:version-url
+V 112
+/mobile/JdAppAndroid/!svn/ver/4031/branches/androidJd-main/src/com/jingdong/app/mall/utils/IGestureListener.java
+END
+MyUncaughtExceptionHandler.java
+K 25
+svn:wc:ra_dav:version-url
+V 122
+/mobile/JdAppAndroid/!svn/ver/3108/branches/androidJd-main/src/com/jingdong/app/mall/utils/MyUncaughtExceptionHandler.java
+END
+JniUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 104
+/mobile/JdAppAndroid/!svn/ver/3052/branches/androidJd-main/src/com/jingdong/app/mall/utils/JniUtils.java
+END
+CommercialThread.java
+K 25
+svn:wc:ra_dav:version-url
+V 112
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/CommercialThread.java
+END
+IOUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/IOUtil.java
+END
+JDStringUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/mobile/JdAppAndroid/!svn/ver/4083/branches/androidJd-main/src/com/jingdong/app/mall/utils/JDStringUtils.java
+END
+NotificationUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 113
+/mobile/JdAppAndroid/!svn/ver/5056/branches/androidJd-main/src/com/jingdong/app/mall/utils/NotificationUtils.java
+END
+DefaultEffectHttpListener.java
+K 25
+svn:wc:ra_dav:version-url
+V 121
+/mobile/JdAppAndroid/!svn/ver/2662/branches/androidJd-main/src/com/jingdong/app/mall/utils/DefaultEffectHttpListener.java
+END
+SubViewBinder.java
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/mobile/JdAppAndroid/!svn/ver/4530/branches/androidJd-main/src/com/jingdong/app/mall/utils/SubViewBinder.java
+END
+EditTextUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/mobile/JdAppAndroid/!svn/ver/4684/branches/androidJd-main/src/com/jingdong/app/mall/utils/EditTextUtils.java
+END
+AlarmUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 106
+/mobile/JdAppAndroid/!svn/ver/5067/branches/androidJd-main/src/com/jingdong/app/mall/utils/AlarmUtils.java
+END
+TimeUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/mobile/JdAppAndroid/!svn/ver/4984/branches/androidJd-main/src/com/jingdong/app/mall/utils/TimeUtils.java
+END
+WebSettingsUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 112
+/mobile/JdAppAndroid/!svn/ver/2884/branches/androidJd-main/src/com/jingdong/app/mall/utils/WebSettingsUtils.java
+END
+ImageUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/mobile/JdAppAndroid/!svn/ver/5190/branches/androidJd-main/src/com/jingdong/app/mall/utils/ImageUtil.java
+END
+ReActivationUserManager.java
+K 25
+svn:wc:ra_dav:version-url
+V 119
+/mobile/JdAppAndroid/!svn/ver/5206/branches/androidJd-main/src/com/jingdong/app/mall/utils/ReActivationUserManager.java
+END
+DBHelperUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 108
+/mobile/JdAppAndroid/!svn/ver/5206/branches/androidJd-main/src/com/jingdong/app/mall/utils/DBHelperUtil.java
+END
+IPriority.java
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/IPriority.java
+END
+Md5Encrypt.java
+K 25
+svn:wc:ra_dav:version-url
+V 106
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/Md5Encrypt.java
+END
+CirculationGalleryAdapter.java
+K 25
+svn:wc:ra_dav:version-url
+V 121
+/mobile/JdAppAndroid/!svn/ver/5325/branches/androidJd-main/src/com/jingdong/app/mall/utils/CirculationGalleryAdapter.java
+END
+HttpDownloader.java
+K 25
+svn:wc:ra_dav:version-url
+V 110
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/HttpDownloader.java
+END
+FileService.java
+K 25
+svn:wc:ra_dav:version-url
+V 107
+/mobile/JdAppAndroid/!svn/ver/5305/branches/androidJd-main/src/com/jingdong/app/mall/utils/FileService.java
+END
+ProductImagesView.java
+K 25
+svn:wc:ra_dav:version-url
+V 113
+/mobile/JdAppAndroid/!svn/ver/2382/branches/androidJd-main/src/com/jingdong/app/mall/utils/ProductImagesView.java
+END
+MyActivity.java
+K 25
+svn:wc:ra_dav:version-url
+V 106
+/mobile/JdAppAndroid/!svn/ver/5454/branches/androidJd-main/src/com/jingdong/app/mall/utils/MyActivity.java
+END
+BeanUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 104
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/BeanUtil.java
+END
+TaskType.java
+K 25
+svn:wc:ra_dav:version-url
+V 104
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/TaskType.java
+END
+BitmapkitUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 110
+/mobile/JdAppAndroid/!svn/ver/3263/branches/androidJd-main/src/com/jingdong/app/mall/utils/BitmapkitUtils.java
+END
+ContentConvertUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 114
+/mobile/JdAppAndroid/!svn/ver/2982/branches/androidJd-main/src/com/jingdong/app/mall/utils/ContentConvertUtil.java
+END
+JdKeyListener.java
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/JdKeyListener.java
+END
+NoTouchImageView.java
+K 25
+svn:wc:ra_dav:version-url
+V 112
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/NoTouchImageView.java
+END
+FileGuider.java
+K 25
+svn:wc:ra_dav:version-url
+V 106
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/FileGuider.java
+END
+Log.java
+K 25
+svn:wc:ra_dav:version-url
+V 99
+/mobile/JdAppAndroid/!svn/ver/5055/branches/androidJd-main/src/com/jingdong/app/mall/utils/Log.java
+END
+SimpleSubViewBinder.java
+K 25
+svn:wc:ra_dav:version-url
+V 115
+/mobile/JdAppAndroid/!svn/ver/5266/branches/androidJd-main/src/com/jingdong/app/mall/utils/SimpleSubViewBinder.java
+END
+HistoryNextPageLoader.java
+K 25
+svn:wc:ra_dav:version-url
+V 117
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/HistoryNextPageLoader.java
+END
+CommonUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 106
+/mobile/JdAppAndroid/!svn/ver/4984/branches/androidJd-main/src/com/jingdong/app/mall/utils/CommonUtil.java
+END
+MyCountdownTimer.java
+K 25
+svn:wc:ra_dav:version-url
+V 112
+/mobile/JdAppAndroid/!svn/ver/2044/branches/androidJd-main/src/com/jingdong/app/mall/utils/MyCountdownTimer.java
+END
+JSONArrayPoxy.java
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/JSONArrayPoxy.java
+END
+SimpleCrypto.java
+K 25
+svn:wc:ra_dav:version-url
+V 108
+/mobile/JdAppAndroid/!svn/ver/5111/branches/androidJd-main/src/com/jingdong/app/mall/utils/SimpleCrypto.java
+END
+JDMiaoShaUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/mobile/JdAppAndroid/!svn/ver/4751/branches/androidJd-main/src/com/jingdong/app/mall/utils/JDMiaoShaUtil.java
+END
+MySimpleAdapter.java
+K 25
+svn:wc:ra_dav:version-url
+V 111
+/mobile/JdAppAndroid/!svn/ver/5052/branches/androidJd-main/src/com/jingdong/app/mall/utils/MySimpleAdapter.java
+END
+JDMiaoShaProduct.java
+K 25
+svn:wc:ra_dav:version-url
+V 112
+/mobile/JdAppAndroid/!svn/ver/4704/branches/androidJd-main/src/com/jingdong/app/mall/utils/JDMiaoShaProduct.java
+END
+JSONObjectProxy.java
+K 25
+svn:wc:ra_dav:version-url
+V 111
+/mobile/JdAppAndroid/!svn/ver/2823/branches/androidJd-main/src/com/jingdong/app/mall/utils/JSONObjectProxy.java
+END
+PushMessageUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 112
+/mobile/JdAppAndroid/!svn/ver/5056/branches/androidJd-main/src/com/jingdong/app/mall/utils/PushMessageUtils.java
+END
+GeoWebChromeClient.java
+K 25
+svn:wc:ra_dav:version-url
+V 114
+/mobile/JdAppAndroid/!svn/ver/2884/branches/androidJd-main/src/com/jingdong/app/mall/utils/GeoWebChromeClient.java
+END
+GlobalInitialization.java
+K 25
+svn:wc:ra_dav:version-url
+V 116
+/mobile/JdAppAndroid/!svn/ver/5147/branches/androidJd-main/src/com/jingdong/app/mall/utils/GlobalInitialization.java
+END
+DPIUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 103
+/mobile/JdAppAndroid/!svn/ver/2759/branches/androidJd-main/src/com/jingdong/app/mall/utils/DPIUtil.java
+END
+DefaultEffectHandle.java
+K 25
+svn:wc:ra_dav:version-url
+V 115
+/mobile/JdAppAndroid/!svn/ver/1721/branches/androidJd-main/src/com/jingdong/app/mall/utils/DefaultEffectHandle.java
+END
+InputKeyFilter.java
+K 25
+svn:wc:ra_dav:version-url
+V 110
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/InputKeyFilter.java
+END
+MyHandlerList.java
+K 25
+svn:wc:ra_dav:version-url
+V 109
+/mobile/JdAppAndroid/!svn/ver/2149/branches/androidJd-main/src/com/jingdong/app/mall/utils/MyHandlerList.java
+END
+TouchImageView.java
+K 25
+svn:wc:ra_dav:version-url
+V 110
+/mobile/JdAppAndroid/!svn/ver/5190/branches/androidJd-main/src/com/jingdong/app/mall/utils/TouchImageView.java
+END
+SimpleJsonAdapter.java
+K 25
+svn:wc:ra_dav:version-url
+V 113
+/mobile/JdAppAndroid/!svn/ver/4704/branches/androidJd-main/src/com/jingdong/app/mall/utils/SimpleJsonAdapter.java
+END
+Base64.java
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/Base64.java
+END
+StatisticsReportUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 116
+/mobile/JdAppAndroid/!svn/ver/5418/branches/androidJd-main/src/com/jingdong/app/mall/utils/StatisticsReportUtil.java
+END
+SearchSuggestionProvider.java
+K 25
+svn:wc:ra_dav:version-url
+V 120
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/SearchSuggestionProvider.java
+END
+JLogUtil.java
+K 25
+svn:wc:ra_dav:version-url
+V 104
+/mobile/JdAppAndroid/!svn/ver/5366/branches/androidJd-main/src/com/jingdong/app/mall/utils/JLogUtil.java
+END
+HttpGroup.java
+K 25
+svn:wc:ra_dav:version-url
+V 105
+/mobile/JdAppAndroid/!svn/ver/5467/branches/androidJd-main/src/com/jingdong/app/mall/utils/HttpGroup.java
+END
+TimerUntil.java
+K 25
+svn:wc:ra_dav:version-url
+V 106
+/mobile/JdAppAndroid/!svn/ver/3155/branches/androidJd-main/src/com/jingdong/app/mall/utils/TimerUntil.java
+END
+PriorityCollection.java
+K 25
+svn:wc:ra_dav:version-url
+V 114
+/mobile/JdAppAndroid/!svn/ver/1480/branches/androidJd-main/src/com/jingdong/app/mall/utils/PriorityCollection.java
+END
+ResolveException.java
+K 25
+svn:wc:ra_dav:version-url
+V 112
+/mobile/JdAppAndroid/!svn/ver/2885/branches/androidJd-main/src/com/jingdong/app/mall/utils/ResolveException.java
+END

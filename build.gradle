@@ -1,0 +1,60 @@
+buildscript {
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'com.android.tools.build:gradle:0.4'
+		
+    }
+	tasks.withType(Compile) {  
+        options.encoding = "UTF-8"  
+    }
+}
+
+apply plugin: 'android'
+
+dependencies {
+	compile files('lib/android-support-v4.jar')
+	compile files('lib/ksoap2-android-assembly-3.0.0-RC.4-jar-with-dependencies.jar')
+}
+
+android {
+
+    compileSdkVersion 12
+    buildToolsVersion "17"
+
+    defaultConfig {
+        minSdkVersion 8
+        targetSdkVersion 17
+    }
+	signingConfigs {
+    	myConfig{
+    		storeFile file("debug_banking.keystore")
+    		storePassword "123456"
+    		keyAlias "123456"
+    		keyPassword "123456"
+    	}
+    }
+    
+     buildTypes{
+    	release {
+    		signingConfig  signingConfigs.myConfig
+    	}
+    }
+	
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            java.srcDirs = ['src']
+            resources.srcDirs = ['src']
+            aidl.srcDirs = ['src']
+            renderscript.srcDirs = ['src']
+            res.srcDirs = ['res']
+            assets.srcDirs = ['assets']
+        }
+
+        instrumentTest.setRoot('tests')
+    }
+}

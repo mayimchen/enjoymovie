@@ -1,0 +1,152 @@
+package com.jingdong.app.mall.utils;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.util.Date;
+
+import android.os.Environment;
+import android.os.Process;
+
+import com.jingdong.app.mall.config.Configuration;
+
+public class Log {
+
+	private static boolean printLog = Boolean.parseBoolean(Configuration.getProperty(Configuration.PRINT_LOG, "false"));
+
+	public static boolean D = printLog ? Boolean.parseBoolean(Configuration.getProperty(Configuration.DEBUG_LOG, "false")) : false;
+	public static boolean V = printLog ? Boolean.parseBoolean(Configuration.getProperty(Configuration.VIEW_LOG, "false")) : false;
+	public static boolean I = printLog ? Boolean.parseBoolean(Configuration.getProperty(Configuration.INFO_LOG, "false")) : false;
+	public static boolean W = printLog ? Boolean.parseBoolean(Configuration.getProperty(Configuration.WARN_LOG, "false")) : false;
+	public static boolean E = printLog ? Boolean.parseBoolean(Configuration.getProperty(Configuration.ERROR_LOG, "false")) : false;
+
+	// 日志存储目录
+	public static final String LOG_FILE = Environment.getExternalStorageDirectory() + "/jd_log.txt";
+	// 是否是测试模式
+	public static final boolean IS_TEST = Configuration.getBooleanProperty(Configuration.TEST_MODE);
+
+	private static RandomAccessFile accessFile;
+
+	static {
+		if (IS_TEST) {
+			File file = new File(LOG_FILE);
+			if (!file.exists()) {
+				try {
+					file.createNewFile();
+				} catch (IOException e) {
+					if (E) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+	}
+
+	public static void d(String tag, String msg) {
+		if (!printLog) {
+			return;
+		}
+		android.util.Log.d(tag, "tid:" + Process.myTid() + "; -->" + msg);
+		saveLog(tag + ":" + msg);
+	}
+
+	public static void d(String tag, String msg, Throwable tr) {
+		if (!printLog) {
+			return;
+		}
+		android.util.Log.d(tag, msg, tr);
+		saveLog(tag + ":" + msg + tr.getMessage());
+	}
+
+	public static void v(String tag, String msg) {
+		if (!printLog) {
+			return;
+		}
+		android.util.Log.v(tag, msg);
+		saveLog(tag + ":" + msg);
+	}
+
+	public static void v(String tag, String msg, Throwable tr) {
+		if (!printLog) {
+			return;
+		}
+		android.util.Log.v(tag, msg, tr);
+		saveLog(tag + ":" + msg + tr.getMessage());
+	}
+
+	public static void i(String tag, String msg) {
+		if (!printLog) {
+			return;
+		}
+		android.util.Log.i(tag, msg);
+		saveLog(tag + ":" + msg);
+	}
+
+	public static void i(String tag, String msg, Throwable tr) {
+		if (!printLog) {
+			return;
+		}
+		android.util.Log.i(tag, msg, tr);
+		saveLog(tag + ":" + msg + tr.getMessage());
+	}
+
+	public static void w(String tag, String msg) {
+		if (!printLog) {
+			return;
+		}
+		android.util.Log.w(tag, msg);
+		saveLog(tag + ":" + msg);
+	}
+
+	public static void w(String tag, Throwable tr) {
+		if (!printLog) {
+			return;
+		}
+		android.util.Log.w(tag, tr);
+		saveLog(tag + ":" + tr.getMessage());
+	}
+
+	public static void w(String tag, String msg, Throwable tr) {
+		if (!printLog) {
+			return;
+		}
+		android.util.Log.w(tag, msg, tr);
+		saveLog(tag + ":" + msg + tr.getMessage());
+	}
+
+	public static void e(String tag, String msg) {
+		if (!printLog) {
+			return;
+		}
+		android.util.Log.e(tag, msg);
+		saveLog(tag + ":" + msg);
+	}
+
+	public static void e(String tag, String msg, Throwable tr) {
+		if (!printLog) {
+			return;
+		}
+		android.util.Log.e(tag, msg, tr);
+		saveLog(tag + ":" + msg + tr.getMessage());
+	}
+
+	private static void saveLog(String msg) {
+		if (IS_TEST)
+			try {
+				if (accessFile == null) {
+					accessFile = new RandomAccessFile(LOG_FILE, "rw");
+				}
+				long fileLength = accessFile.length();
+				// 将写文件指针移到文件尾。
+				accessFile.seek(fileLength);
+				accessFile.writeBytes(FormatUtils.formatDate(new Date()) + ":");
+				accessFile.writeBytes(msg);
+				accessFile.writeBytes("\r\n");
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+	}
+}

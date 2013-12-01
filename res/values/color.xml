@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="red">#FF0000</color>
+    <color name="gray">#FFCCCCCC</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="blue">#EE0000C6</color>
+    <color name="dark_red">#FFCC0000</color>
+    <color name="product_odd_row">#FFFFFFFF</color>
+    <color name="product_even_row">#FFF5F5F5</color>
+    <color name="light_gray">#FFE6E6E6</color>
+    <color name="orange_line">#FFF2DAAC</color>
+    <color name="all_bg">#FFF6F2ED</color>
+    
+     <color name="mt_light_gray">#FFDDDDDD</color>
+    <color name="nice_blue">#8F2ebff7</color>
+    
+    <!-- 列表项被点击时高亮效果 -->
+    <drawable name="list_row_pressed">#FFEEEEEE</drawable>
+     <!-- 商品分类奇偶行背景色 -->
+    <drawable name="list_odd_row_normal">#FFF5F5F5</drawable>
+    <drawable name="list_even_row_normal">#FFE6E6E6</drawable>
+    
+    <!-- 搜索提示列表背景色 -->
+    <drawable name="search_list_normal">#FFE6E6E6</drawable>
+
+
+
+    <!-- 商品列表页奇偶行背景色 -->
+    <drawable name="product_odd_row_normal">#FFFFFFFF</drawable>
+    <drawable name="product_even_row_normal">#FFF5F5F5</drawable>
+
+    <!-- 列表行背景色-Normal -->
+    <drawable name="list_row_mormal">#FFFFFFFF</drawable>
+
+    <!-- 满赠/音像列表行背景色-Normal -->
+    <drawable name="list_row_zeng">#FFFDDD</drawable>
+
+    <!-- 列表项被点击时高亮效果 -->
+
+    <!-- 所有红色文字请使用此定义，以后如果需要深色一点或者浅色一点，在此统一修改 -->
+    <color name="font_red">#FF0000</color>
+    <color name="font_gray">#888888</color>
+
+    <!-- 产品详情中颜色或尺寸等选项 -->
+    <color name="product_options_active">#FF9900</color>
+    <color name="product_options_passive">#999999</color>
+
+    <!-- 系统默认有的按钮或者背景颜色或图片可以使用这个来去掉 -->
+    <drawable name="none">#00000000</drawable>
+
+    <!-- 秒杀 -->
+    <color name="limit_buy_border_bg">#ffd4bc77</color>
+    <color name="limit_buy_title_bg">#fffffaee</color>
+    <color name="limit_buy_title_border_bg">#fff2daac</color>
+    <color name="limit_buy_green">#FF00CC00</color>
+    <color name="limit_buy_text_bg">#FF666666</color>
+    <color name="lightblack">#202020</color> <!-- 黑色 -->
+
+
+    <!-- 评价图 -->
+    <color name="crimson">#E61A1A</color> <!-- 深红 -->
+    <!-- 分类字段颜色 -->
+    <color name="category_name_gray">#FFA2A2A2</color>
+    <color name="category_list_bg">#FFF7F7F7</color>
+    <color name="category_vertival_line">#FFC4C4C4</color>
+    <color name="category_divider_color">#DBDBDB</color>
+    <color name="category_text_color">#000000</color>
+    
+    <!-- 延保 -->
+    <color name="yan_bao_item_tip">#C9834C</color>
+    <color name="yan_bao_nav_bg">#E7E7E7</color>
+    <color name="yan_bao_nav_bg_stroke">#C1C1C1</color>
+    
+    <color name="yan_bao_layout_bg_solid">#FFFFFDEF</color>
+    <color name="yan_bao_layout_bg_stroke">#FFEDC8A5</color>
+    
+    <color name="home_no_network_hint">#ada39b</color>
+    <color name="home_sales_activity_enddate">#909090</color>
+    <color name="home_sales_title">#555555</color>
+    <color name="home_sales_produce_price">#E76E69</color>
+    <color name="home_promotion_title">#FFFFFF</color>
+    <color name="home_shortcuts_item_title">#555555</color>
+    <color name="home_guang_item_title">#555555</color>
+    <color name="home_sales_bg">#f0f0f0</color>
+    
+    <color name="cart_product_other_cut_price">#FF009900</color>
+    <color name="cart_product_name">#FF333333</color>
+    <color name="cart_product_id">#999999</color>
+    <color name="cart_zengpin_bg">#ffeec9</color>
+    
+    <color name="cart_shopping_main_color_bg">#e6e6e6</color>
+    <color name="cart_shopping_title_tv_textview_color">#fff</color>
+    <color name="cart_shopping_pack_item_bg">#FFF6DF</color>
+    <color name="cart_shopping_no_login_tips_textview_color">#C9834C</color>
+    <color name="cart_shopping_manjian_textview_color">#009900</color>
+    <color name="cart_shopping_price_textview_color">#cc0000</color>
+    <color name="cart_shopping_product_name_color">#333333</color>
+    <color name="cart_shopping_product_id_color">#999999</color>
+    <color name="cart_product_yb_bg">#ffeec9</color>
+    <color name="cart_product_item_text_color">#000000</color>
+    
+    <color name="rateplan_popupwindow_bg">#F6F2ED</color> 
+</resources>

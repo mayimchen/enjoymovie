@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+    
+     <!-- 界面Title -->
+
+    <include
+        android:id="@+id/common_title"
+        layout="@layout/head" />
+
+    <!-- 排序按钮 -->
+
+    <RelativeLayout
+        android:id="@+id/sort_buttons"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/common_title"
+        android:paddingBottom="6dp"
+        android:paddingLeft="10dp"
+        android:paddingRight="10dp"
+        android:paddingTop="6dp"
+        android:visibility="gone" >
+
+        <RadioGroup
+            xmlns:android="http://schemas.android.com/apk/res/android"
+            android:id="@+id/sort_button_group"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" >
+
+            <!-- 左侧排序按钮 -->
+
+            <RadioButton
+                android:id="@+id/sort_button_left"
+                style="@style/product_list_sort_button"
+                android:background="@drawable/sort_left_button" >
+            </RadioButton>
+
+            <!-- 中间排序按钮 -->
+
+            <RadioButton
+                android:id="@+id/sort_button_middle"
+                style="@style/product_list_sort_button"
+                android:background="@drawable/sort_middle_button" >
+            </RadioButton>
+
+            <!-- 右侧排序按钮 -->
+
+            <RadioButton
+                android:id="@+id/sort_button_right"
+                style="@style/product_list_sort_button"
+                android:background="@drawable/sort_right_button" >
+            </RadioButton>
+        </RadioGroup>
+
+        <ImageView
+            android:id="@+id/sort_order1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignLeft="@id/sort_button_group"
+            android:layout_below="@id/common_title"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="75dp"
+            android:visibility="gone" >
+        </ImageView>
+    </RelativeLayout>
+
+    <!-- 商品列表 -->
+
+    <ListView
+        android:id="@+id/flight_listview"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:cacheColorHint="#00000000"
+        android:layout_below="@id/sort_buttons"
+        android:fadeScrollbars="true" >
+    </ListView>
+    
+    
+    <ProgressBar
+        android:id="@+id/flight_list_loading_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:visibility="gone"
+        android:layout_gravity="center"/>
+
+    <include
+        android:id="@+id/loading_error_tips_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        layout="@layout/loading_error_tips" />
+    <include
+        android:id="@+id/loading_nodata_tips_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        layout="@layout/list_no_data_tips" />
+    
+</RelativeLayout>

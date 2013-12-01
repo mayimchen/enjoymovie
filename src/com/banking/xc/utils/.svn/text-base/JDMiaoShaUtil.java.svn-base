@@ -1,0 +1,170 @@
+package com.jingdong.app.mall.utils;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import android.graphics.Color;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.style.CharacterStyle;
+import android.text.style.ForegroundColorSpan;
+
+public class JDMiaoShaUtil {
+
+	public static final String TAG = "JDMiaoSha";
+
+	private MyCountdownTimer myCountdownTimer;
+	private Map<Integer, CountDownListener> countdownMap = new HashMap<Integer, CountDownListener>();
+	private int what;
+
+	/** 即将开始 */
+	public final static int MIAOSHA_WILLBEGIN = 1;
+	/** 秒杀进行中 */
+	public final static int MIAOSHA_BEGINING = 2;
+	/** 活动结束 */
+	public final static int MIAOSHA_FINISH = 3;
+
+	public void setHMS(long m) {
+		if (myCountdownTimer != null) {
+			myCountdownTimer.reset(m, 1000, what);
+		}
+	}
+
+	public long getCountdownTime(long startRemainTime, long endRemainTime) {
+		long countdownTime = 0;
+		if (startRemainTime > 0) {// TODO
+			// if (!noTitle) {
+			// countdownTitle.setText(R.string.limit_buy_time_startcountdown);
+			// }
+			countdownTime = startRemainTime;
+			what = MIAOSHA_WILLBEGIN;
+		} else if (endRemainTime > 0 && startRemainTime < 0) {
+			// if (!noTitle) {
+			// countdownTitle.setTextColor(context.getResources().getColor(R.color.limit_buy_green));
+			// countdownTitle.setText(R.string.limit_buy_time_remaining);
+			// }
+			countdownTime = endRemainTime;
+			what = MIAOSHA_BEGINING;
+		} else if (endRemainTime < 0 && startRemainTime < 0) {
+			// if (!noTitle) {
+			// countdownTitle.setTextColor(context.getResources().getColor(R.color.font_red));
+			// countdownTitle.setText(R.string.limit_buy_time_finish);
+			// }
+			countdownTime = 1;
+			what = MIAOSHA_FINISH;
+		}
+		return countdownTime;
+	}
+
+	public void addListener(Integer key, CountDownListener listener) {
+		countdownMap.put(key, listener);
+	}
+
+	public void setCountdown(long startRemainTime, long endRemainTime) {
+		setCountdown(startRemainTime, endRemainTime, countdownMap);
+	}
+
+	public void setCountdown(long startRemainTime, long endRemainTime, CountDownListener listener) {
+		countdownMap.put(0, listener);
+		setCountdown(startRemainTime, endRemainTime, countdownMap);
+	}
+
+	/**
+	 * 倒计时钟
+	 * 
+	 * @param startRemainTime
+	 * @param endRemainTime
+	 * @return
+	 */
+	public void setCountdown(long startRemainTime, final long endRemainTime, final Map<Integer, CountDownListener> map) {
+		if (map == null || map.size() == 0) {
+			return;
+		}
+		if (Log.D) {
+			Log.d(TAG, " -->> size = " + map.size());
+		}
+		final long countdownTime = getCountdownTime(startRemainTime, endRemainTime);
+		if (Log.D) {
+			Log.d(TAG, " -->>setCountdown countdownTime=" + countdownTime);
+		}
+		if (myCountdownTimer == null) {
+			myCountdownTimer = new MyCountdownTimer(countdownTime, 1000, what) {// TODO
+				@Override
+				public void onTick(long millisUntilFinished, int what) {
+					final long[] hms = toHMS(millisUntilFinished);
+					for (Integer key : map.keySet()) {
+						final CountDownListener l = map.get(key);
+						if (l != null) {
+							l.changed(this, millisUntilFinished, hmsToString(hms), what);
+						}
+					}
+				}
+
+				@Override
+				public void onFinish(int what) {
+					for (Integer key : map.keySet()) {
+						final CountDownListener l = map.get(key);
+						if (l != null) {
+							l.finish(this, endRemainTime, what);
+						}
+					}
+				}
+			}.start();
+		} else {
+			myCountdownTimer.reset(countdownTime, 1000, what);
+		}
+	}
+
+	public void countdownCancel() {
+		if (myCountdownTimer != null) {
+			myCountdownTimer.cancel(0);
+		}
+	}
+
+	public SpannableStringBuilder hmsToString(long[] hms) {
+		final String hh = format(hms[0]);// 时
+		final String mm = format(hms[1]);// 分
+		final String ss = format(hms[2]);// 秒
+		final String tag_start = "还剩";
+		final String tag_hh = "时";
+		final String tag_mm = "分";
+		final String tag_ss = "秒";
+		final String countdownHMS = tag_start + hh + tag_hh + mm + tag_mm + ss + tag_ss;
+		final SpannableStringBuilder ssb = new SpannableStringBuilder(countdownHMS);
+		final CharacterStyle span_hh = new ForegroundColorSpan(Color.RED);
+		final CharacterStyle span_mm = new ForegroundColorSpan(Color.RED);
+		final CharacterStyle span_ss = new ForegroundColorSpan(Color.RED);
+		ssb.setSpan(span_hh, tag_start.length(), tag_start.length() + hh.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+		ssb.setSpan(span_mm, tag_start.length() + hh.length() + tag_hh.length(), tag_start.length() + hh.length() + tag_hh.length() + mm.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+		ssb.setSpan(span_ss, tag_start.length() + hh.length() + tag_hh.length() + mm.length() + tag_mm.length(), tag_start.length() + hh.length() + tag_hh.length() + mm.length() + tag_mm.length()
+				+ ss.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+		return ssb;
+	}
+
+	public long[] toHMS(long ms) {
+		long s;// 秒
+		long h;// 小时
+		long m;// 分钟
+		h = ms / 1000 / 60 / 60;
+		m = (ms - h * 60 * 60 * 1000) / 1000 / 60;
+		s = ms / 1000 - h * 60 * 60 - m * 60;
+		h = h < 0 ? 0 : h;
+		m = m < 0 ? 0 : m;
+		s = s < 0 ? 0 : s;
+		return new long[] { h, m, s };
+	}
+
+	private String format(long ms) {
+		String text = "" + ms;
+		if (text.length() == 1) {
+			text = "0" + text;
+		}
+		return text;
+	}
+
+	public interface CountDownListener {
+		public boolean finish(MyCountdownTimer timer, long endRemainTime, int what);
+
+		public void changed(MyCountdownTimer timer, long millisUntilFinished, SpannableStringBuilder hmsToString, int what);
+	}
+}

@@ -1,0 +1,59 @@
+package com.jingdong.app.mall.utils;
+
+import java.util.Map;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+
+import com.jingdong.app.jlog.JLog;
+import com.jingdong.app.mall.config.Configuration;
+
+public class JLogUtil {
+
+	private static Boolean isNeedLog = null;// 服务端开关
+	private static Boolean isLocalNeedLog = null;// 本地开关
+	private static final String KEY_NEED_LOG = "needLog";
+	private static final String TAG = "JLogUtil";
+	private static final String NEED_LOG = "1";
+
+	/**
+	 * 全局控制JLog
+	 */
+	public static void onVisit(Context context, String pageId, Map<String, String> params) {
+		if (isNeedLog()) {
+			JLog.onVisit(context, pageId, params);
+		}
+	}
+
+	/**
+	 * 是否需要日志
+	 * 
+	 * @return
+	 */
+	public static boolean isNeedLog() {
+
+		if(isNeedLog != null) {
+			return isNeedLog;
+		}
+		
+		if (isLocalNeedLog == null) {
+			isLocalNeedLog = Configuration.getBooleanProperty(Configuration.TEST_MODE, false);
+		}
+		
+		if(isLocalNeedLog) {
+			SharedPreferences preferences = CommonUtil.getJdSharedPreferences();
+			if (NEED_LOG.equals(preferences.getString(KEY_NEED_LOG, ""))) {
+				isNeedLog = true;
+			} else {
+				isNeedLog = false;
+			}
+		} else {
+			isNeedLog = false;
+		}
+
+		if (Log.D) {
+			Log.d(TAG, "isNeedLog() -- isNeedLog : " + isNeedLog);
+		}
+		return isNeedLog;
+	}
+}

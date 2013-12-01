@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+    
+     <TextView
+            android:id="@+id/item_package_name"
+            android:layout_width="wrap_content"
+            android:layout_height="20dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="3dp"
+            android:singleLine="true"
+            android:text=""
+            android:textSize="17sp" />
+
+        <RelativeLayout
+            android:id="@+id/package_describe_layout"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:padding="3dp" >
+
+            <TextView
+                android:id="@+id/all_price_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:layout_marginLeft="15dp"
+                android:layout_marginTop="3dp"
+                android:singleLine="true"
+                android:gravity="center_vertical"
+                android:text="总价："
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/all_price_tv_content"
+                android:layout_width="wrap_content"
+                android:layout_height="50dp"
+                android:layout_marginLeft="5dp"
+                android:layout_marginTop="3dp"
+                android:layout_toRightOf="@id/all_price_tv"
+                android:singleLine="true"
+                android:gravity="center_vertical"
+                android:text=""
+                android:textSize="17sp" />
+
+            <Button
+                android:id="@+id/setResult_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentRight="true"
+                android:layout_marginLeft="5dp"
+                android:layout_marginTop="3dp"
+                android:singleLine="true"
+                android:text="加入行程表" />
+
+            <TextView
+                android:id="@+id/item_describe_tv"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/all_price_tv_content"
+                android:layout_marginLeft="15dp"
+                android:layout_marginTop="3dp"
+                android:text="暂无相关介绍。"
+                android:maxLines="3"
+                android:textSize="14sp" />
+        </RelativeLayout>
+    
+</LinearLayout>

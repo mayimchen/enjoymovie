@@ -1,0 +1,87 @@
+package com.jingdong.app.mall.utils;
+
+import java.util.Date;
+
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences.Editor;
+import android.media.AudioManager;
+
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.broadcastReceiver.InterfaceBroadcastReceiver;
+import com.jingdong.app.mall.constant.Constants;
+import com.jingdong.app.mall.entity.MessageSummary;
+
+public class NotificationUtils {
+
+	public static final int PUSH_MESSAGE_NOTIFY_ID = 0x10057;
+
+	public static final String TAG = "NotificationUtils";
+
+	private static NotificationManager mNotificationManager;
+
+	public static int count = 0;
+
+	public static void addPushMessageNotify(Context context, MessageSummary summary, int thisTimeCount, boolean needVoice) {
+
+		count += thisTimeCount;
+
+		if (Log.D) {
+			Log.d(TAG, "summary : " + summary);
+			Log.d(TAG, "count : " + count + "   --- >  needVoice : " + needVoice);
+		}
+
+		Notification notification = new Notification(R.drawable.android_jd_notification, summary.getTitle(), System.currentTimeMillis());
+
+		notification.number = count;
+		notification.flags = Notification.FLAG_AUTO_CANCEL;
+		notification.defaults |= Notification.DEFAULT_LIGHTS; // 亮灯
+		notification.ledARGB = 0x99f0ff00;
+		notification.ledOnMS = 300;
+		notification.ledOffMS = 2000;
+		notification.flags |= Notification.FLAG_SHOW_LIGHTS;
+
+		AudioManager mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+		int mode = mAudioManager.getRingerMode();
+		if (needVoice && mode != AudioManager.RINGER_MODE_SILENT && mode != AudioManager.RINGER_MODE_VIBRATE) {
+			notification.defaults |= Notification.DEFAULT_SOUND; // 声音
+		}
+
+		Intent intent;
+		if (count == 1) { // 只有一条消息进详情，多条消息进列表
+			intent = InterfaceBroadcastReceiver.createIntent(InterfaceBroadcastReceiver.MODULE_ID_MESSAGE, null);
+			Editor editor = CommonUtil.getJdSharedPreferences().edit();
+			editor.putString(Constants.SERVICE_TO_ACTIVIATE_MESSAGE, summary.getJsonObjectString());
+			editor.commit();
+		} else {
+			intent = InterfaceBroadcastReceiver.createIntent(InterfaceBroadcastReceiver.MODULE_ID_MESSAGE_LIST, null);
+		}
+
+		// 将最后弹出通知的消息ID和时间作为关键性日志记录起来
+		PushMessageUtils.saveNotifyIdAndTime(summary.getId());
+
+		PendingIntent contentIntent = PendingIntent.getBroadcast(context, R.string.app_name, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+		notification.setLatestEventInfo(context, summary.getTitle() + " (共" + count + "条)", summary.getContent(), contentIntent);
+
+		getNotificationManager(context).notify(PUSH_MESSAGE_NOTIFY_ID, notification);
+	}
+
+	public static void removeNotify(Context context, int type) {
+		if (Log.D) {
+			Log.d(TAG, "removeNotify type:" + type);
+		}
+		getNotificationManager(context).cancel(type);
+	}
+
+	private static NotificationManager getNotificationManager(Context context) {
+		if (mNotificationManager == null) {
+			mNotificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+		}
+		return mNotificationManager;
+	}
+
+}

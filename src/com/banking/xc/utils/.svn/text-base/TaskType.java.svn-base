@@ -1,0 +1,18 @@
+package com.jingdong.app.mall.utils;
+
+/**
+ * Copyright 2010 Jingdong Android Mobile Application
+ * 
+ * @author hechel
+ * 
+ *         Time: 2010-12-23 下午07:06:47
+ * 
+ *         Name:
+ * 
+ *         Description:
+ */
+
+public class TaskType {
+ public final static int PERSIONEL= 0;
+ public final static int PRODUCT_LIST=1;
+}

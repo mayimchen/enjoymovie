@@ -1,0 +1,323 @@
+package com.jingdong.app.mall.secure;
+
+import java.io.IOException;
+import java.math.BigInteger;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.RSAPrivateKeySpec;
+import java.security.spec.RSAPublicKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.StringTokenizer;
+
+import javax.crypto.Cipher;
+
+import android.util.Log;
+
+import com.jingdong.app.mall.utils.Base64;
+
+public class RSAHelper {
+	private static PublicKey publicKey;
+	private static PrivateKey privateKey;
+	private static Cipher cipher;
+	public static final String RAS_E1 = "65537";
+	public static final String RAS_N1 = "151271798880033854287265892076354612533153713832406385904911178209493654664939238905534582371895950811379233854875946546459589151862470463852440833899497247142453992630018166245597346904446766965609150343967974904481793067794500077913992375940130870900414482641497283447201731956542465730058686924517791676251";
+	public static final String RAS_D1 = "10181422781937368681220224452580987776122511431935312391878834964708126870730228463498680788599310908784256229822204254336226066937231750248762020207374189368257192202796979116569703068970833761011754528432893872901525616312296004047864321453311474491486232253554750079150960526505082970220415017289481286449";
+
+	private static final String   RSA_N = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCMmJVS+HQCMeVKDPsGZNwjdQtj/m/QliM1evvRZj+7yu9nmfk13b8nX/UMhg0tcs0Vbgt66VK759qpmgCH6uLKVe2Xr0QDA4guH32SU9RUWXKlC3r6RDzPAY3Bb9CG2q3tJC5RnkoVtWRM6owkd4CycMXiOXhT3Zut/Ne+8q30eQIDAQAB";
+									
+	//private static final String PUBLIC_KEY = "MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC1C731tcD3PGkI+yUurBvARopVOoHxMyDDJzA3PF0rHDgjlucTrBNdWAkEvlY3Wh5aMfdlxsO1DIuIGL4dKIpNhbVqd4pSb0JpxvHW2aB1M4NsI4d9y+SaC9MUlLkx1XeILrt1wU0J36fWDWmNc5hzUwzpGDEGpb/KQTwZ9zpvIwIDAQAB";
+//	private static final String PUBLIC_KEY = "z35gz/L59tV5t3kI8v7+/vr//H5y/89+dv1+fv9ty1Bwsoodk1/EkSruncOdFCQMJYGVKR4aqFqCIrBS3lK3uHhodLL/efU4rANQCqc7/id1UYeCrRFIi2Tw0sEKisXwrwmAnXvgWZSFfmSBP8La5zQlJ9hOFCTFBl5NHl2W9cejAlDtRVshMJukiBVcNvvxigCaKMMWt28dg8cMRP38/v/+";
+	private static final String PUBLIC_KEY = "z35gz/L59tV5t3kI8v7+/vr//H5y/89+dv1+fv9QTZjTm9IXibd+BuxjDNhlPXZe8R5tFOcIPxlwUjJlLE2MYNR0KAeC0jbthYhPgQiOG6dkAD4OUci+yuSW/Ki3sIEKhMoreSCuYBmbE8syaW3p4w4qaFBNLB4zBtfB6FddtMWdiOy/hcUx7RDWnZSBYEcGBlff4cI6Kg2z+bMAPv38/v/+";
+	private static RSAHelper instance = new RSAHelper();
+	public static RSAHelper getInstance(){
+		return instance;
+	}
+	private RSAHelper(){
+		
+	}
+	public static void init() {
+
+		try {
+//			publicKey = getPublicKey();
+//			privateKey = getPrivateKey();
+			publicKey = getPublicKey(PUBLIC_KEY);
+//			privateKey = getPrivateKey(RSA_D);
+			cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	/**
+	 * 初始化公钥
+	 * @param pubKey 公钥串
+	 */
+	public static void init(String pubKey) {
+
+		try {
+//			publicKey = getPublicKey();
+//			privateKey = getPrivateKey();
+			//publicKey = getPublicKey(key);
+			publicKey=getPublicKey(pubKey);
+			cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding","BC");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+/**
+ * 初始化公私钥
+ * @param priKey 私钥串
+ * @param pubKey 公钥串
+ */
+	public static void init(String priKey,String pubKey) {
+
+		try {
+//			publicKey = getPublicKey();
+//			privateKey = getPrivateKey();
+			//publicKey = getPublicKey(key);
+			privateKey = getPrivateKey(priKey);
+			publicKey=getPublicKey(pubKey);
+			cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding","BC");
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 得到公钥
+	 * 
+	 * @param key
+	 *            密钥字符串
+	 * @throws Exception
+	 */
+	public static PublicKey getPublicKey() throws Exception {
+		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		BigInteger rsa_e = new BigInteger(RAS_E1, 10);
+		BigInteger rsa_n = new BigInteger(RAS_N1, 10);
+		RSAPublicKeySpec rsaPublicKeySpec = new RSAPublicKeySpec(rsa_n, rsa_e);
+
+		RSAPublicKey rsaPublicKey = (RSAPublicKey) keyFactory
+				.generatePublic(rsaPublicKeySpec);
+		return rsaPublicKey;
+	}
+	/**
+	 * 得到公钥
+	 * 
+	 * @param key
+	 *            密钥字符串（经过base64编码）
+	 * @throws Exception
+	 */
+	public static RSAPublicKey getPublicKey(String key) throws Exception {
+		byte[] keyBytes;
+		keyBytes = Base64.decode(key);
+		//对key进行求补操作 
+		for (int i = 0, byteLength = keyBytes.length; i < byteLength; i++) {
+			keyBytes[i] =  (byte) ~keyBytes[i];
+		}
+
+		X509EncodedKeySpec keySpec = new X509EncodedKeySpec(keyBytes);
+		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		RSAPublicKey publicKey = (RSAPublicKey) keyFactory.generatePublic(keySpec);
+		return publicKey;
+	}
+
+
+	/**
+	 * 得到私钥
+	 * 
+	 * @param key
+	 *            密钥字符串（经过base64编码）
+	 * @throws Exception
+	 */
+	public static PrivateKey getPrivateKey(String key) throws Exception {
+		byte[] keyBytes;
+		keyBytes = Base64.decode(key);
+
+		PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(keyBytes);
+		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
+		return privateKey;
+	}
+	
+	/**
+	 * 得到私钥
+	 * 
+	 * @param key
+	 *            密钥字符串（经过base64编码）
+	 * @throws Exception
+	 */
+	public static PrivateKey getPrivateKey() throws Exception {
+		BigInteger rsa_n = new BigInteger(RAS_N1, 10);
+		BigInteger rsa_d = new BigInteger(RAS_D1, 10);
+		RSAPrivateKeySpec rsaPrivateKeySpec = new RSAPrivateKeySpec(rsa_n,
+				rsa_d);
+		KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+		RSAPrivateKey privateKey = (RSAPrivateKey) keyFactory
+				.generatePrivate(rsaPrivateKeySpec);
+		return privateKey;
+	}
+
+	/**
+	 * 加密
+	 * 
+	 * @param plainTextArray
+	 *            明文
+	 * @return 加密过的密文
+	 */
+	public static byte[] encrypt(byte[] plainTextArray) {
+		try {
+
+			cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+			byte[] encryptByteArray = cipher.doFinal(plainTextArray);
+			return encryptByteArray;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	/**
+	 * 解密
+	 * 
+	 * @param encrypt
+	 *            加密过的密文
+	 * @return 明文
+	 */
+	public static byte[] dencrypt(byte[] encrypt) {
+		try {
+			
+			cipher.init(Cipher.DECRYPT_MODE, privateKey);
+			byte[] decryptByteArray = cipher.doFinal(encrypt);
+			return decryptByteArray;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	private final static int PT_LEN = 117;// 1024位RSA加密算法的每次加密明文最大长度
+	private final static String SPRIT_CHAR="|";//分融符
+
+	/**
+	 * 分数据进行分段进行加密
+	 * 
+	 * @param plainText 
+	 * @throws IOException 
+	 */
+	public static String encryptBySeg(byte[] plainText) throws IOException {
+
+	
+		return encryptBySeg( plainText,Base64.NO_OPTIONS);
+
+	}
+	/**
+	 * 分数据进行分段进行加密
+	 * 
+	 * @param plainText 
+	 * @throws IOException 
+	 */
+	public static String encryptBySeg(byte[] plainText,int option) throws IOException {
+		
+		int mods = plainText.length / PT_LEN + 1;
+		StringBuffer sb = new StringBuffer();
+		for (int i = 0; i < mods; i++) {
+			byte[] tmp;
+			if(i==mods-1){
+				int leftLen = plainText.length-PT_LEN*i;
+				tmp = new byte[leftLen];
+				System.arraycopy(plainText, PT_LEN*i, tmp, 0, leftLen);
+				
+			}else{
+				tmp = new byte[PT_LEN];
+				System.arraycopy(plainText, PT_LEN*i, tmp, 0, PT_LEN);
+			}
+			
+			tmp = encrypt(tmp);
+			String base64str = Base64.encodeBytes(tmp,option);
+			sb.append(base64str).append(SPRIT_CHAR);
+			
+			
+
+		}
+		sb.deleteCharAt(sb.length()-1);
+		return sb.toString();
+
+	}
+	/**
+	 * 分数据进行分段进行加密
+	 * 
+	 * @param plainText 
+	 */
+	public static String dencryptBySeg(String plainTextA) {
+		StringTokenizer tokenizer = new StringTokenizer(plainTextA,"|");
+		
+		StringBuffer sb = new StringBuffer();
+		Log.i("test", "tokenizer counts:"+tokenizer.countTokens());
+		while (tokenizer.hasMoreTokens()) {
+			byte[] tmp;
+			String tmpBase64Str = (String) tokenizer.nextElement();
+			Log.i("test", "dencryptBySeg:"+tmpBase64Str);
+			
+			try {
+				tmp = Base64.decode(getFromatBase64String(tmpBase64Str));
+				Log.i("test", "base64 decode:"+new String(tmp));
+				tmp = dencrypt(tmp);
+				Log.i("test", "Rsa decode:"+new String(tmp));
+				sb.append(new String(tmp));
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+
+		}
+		return sb.toString();
+
+	}
+	
+	/**
+	 * 分数据进行分段进行加密
+	 * 
+	 * @param plainText 
+	 */
+	public static String dencryptBySegBaseZip(String plainTextA,int times) {
+		StringTokenizer tokenizer = new StringTokenizer(plainTextA,"|");
+		
+		StringBuffer sb = new StringBuffer();
+		while (tokenizer.hasMoreTokens()) {
+			byte[] tmp;
+			String tmpBase64Str = (String) tokenizer.nextElement();
+			//Log.i("test", "dencryptBySeg:"+tmpStr);
+			
+			try {
+				tmp = Base64.decode(getFromatBase64String(tmpBase64Str),Base64.GZIP);
+				//Log.i("test", "base64 decode:"+new String(tmp));
+				tmp = dencrypt(tmp);
+				sb.append(new String(tmp));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+
+		}
+		return sb.toString();
+
+	}
+	/**
+	 * 
+	 * @param str
+	 * @return
+	 */
+	public static  String getFromatBase64String(String str){
+//		int timesModes = (int) (Math.pow(1.5, times-1)*10);
+//		final int  subLength = 172*timesModes/10;//这个数字是由RSA1024位　及base 64增大0.5倍，具体计算公式为：rsa密钥长度/8*(1.5);
+		final int  subLength=172;
+		String ret = str.substring(str.length()-subLength, str.length());
+		Log.i("reg", "regleng:"+str.length()+"reg:"+str);
+		return ret;
+		
+	}
+	
+}

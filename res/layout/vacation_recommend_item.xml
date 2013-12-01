@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="65dp"
+    android:orientation="vertical" >
+    <!-- 135dp,85dp -->
+    <ImageView 
+        android:id="@+id/vacation_recommend_iv"
+        android:layout_height="fill_parent"
+        android:layout_width="fill_parent"
+        android:scaleType="fitXY"
+        />
+    <TextView
+        android:id="@+id/vacation_recommend_tv"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:singleLine="true"
+        android:ellipsize="end"
+        android:layout_alignParentBottom="true"
+        android:background="#c8eb9ea4"
+        android:paddingLeft="10dp"
+        android:textColor="@color/white"
+        android:textSize="12sp"
+        android:textStyle="bold" />
+    <!--  -->
+    <!--  
+    <TextView 
+        android:id="@+id/vacation_recommend_tv"
+        android:layout_width="100dp"
+        android:layout_height="21dp"
+        android:layout_below="@id/vacation_recommend_iv"
+        android:layout_gravity="left"
+        android:layout_marginBottom="2dp"
+        android:background="@drawable/vacation_recommend_tv_bg"
+        android:focusable="false"
+        android:gravity="center_vertical"
+        android:paddingLeft="6dp"
+        android:paddingTop="3dp"
+        android:singleLine="true"
+        android:textColor="#E76E69"
+        android:textSize="12sp"/>
+        -->
+</RelativeLayout>

@@ -1,0 +1,958 @@
+package com.jingdong.app.mall.utils.ui.view;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import android.content.Context;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.widget.ImageSwitcher;
+import android.widget.LinearLayout;
+
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.WebActivity;
+import com.jingdong.app.mall.entity.Commercial;
+import com.jingdong.app.mall.entity.SourceEntity;
+import com.jingdong.app.mall.home.PullRefreshListener;
+import com.jingdong.app.mall.product.ProductListActivity;
+import com.jingdong.app.mall.promotion.PromotionActivity;
+import com.jingdong.app.mall.utils.CommonUtil;
+import com.jingdong.app.mall.utils.CommonUtil.BrowserUrlListener;
+import com.jingdong.app.mall.utils.DPIUtil;
+import com.jingdong.app.mall.utils.ExceptionDrawable;
+import com.jingdong.app.mall.utils.HttpGroup;
+import com.jingdong.app.mall.utils.HttpGroup.HttpError;
+import com.jingdong.app.mall.utils.HttpGroup.HttpGroupSetting;
+import com.jingdong.app.mall.utils.HttpGroup.HttpResponse;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSetting;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSettingParams;
+import com.jingdong.app.mall.utils.IGestureListener;
+import com.jingdong.app.mall.utils.IGestureListener.TouchFlingActionListener;
+import com.jingdong.app.mall.utils.ImageUtil;
+import com.jingdong.app.mall.utils.ImageUtil.InputWay;
+import com.jingdong.app.mall.utils.JSONArrayPoxy;
+import com.jingdong.app.mall.utils.Log;
+import com.jingdong.app.mall.utils.MyActivity;
+import com.jingdong.app.mall.utils.URLParamMap;
+import com.jingdong.app.mall.utils.ui.anim.Rotate3d;
+
+public class CommodityPromotionView implements Runnable, PullRefreshListener {
+	/** 活动专区图片缓存 **/
+	public HashMap<String, Drawable> commercialCache;
+	/** 活动专区数据模型集合 **/
+	public ArrayList<Commercial> commercialsList;
+	private int commIndex;
+	private int oldIndex;
+	private boolean lockTouch;
+	private boolean isOnline = true;
+	private boolean onWait;
+	private boolean isDown;
+	// private boolean isReverse;
+	private boolean isDoing;
+	private boolean isDoUp;
+	private boolean isLoaderFinish;
+	private boolean isActivityLoader;// 活动图接口加载成功标志
+	
+	private HttpGroup mHttpGroup;
+
+	private final String TAG = "CommodityPromotionView";
+
+	public boolean isActivityLoader() {
+		return isActivityLoader;
+	}
+
+	private Rotate3d leftAnimation, rightAnimation;
+	private int type;
+	private ImageSwitcher mSwitcher;
+	private LinearLayout commLayout;
+	private LinearLayout mLayoutLoadFaild;// 加载失败view
+	private LinearLayout mLayoutLoading;// 加载中view
+	private Context mContext;
+	private Thread currentThread;
+
+	private MyActivity mActivity;
+
+	public CommodityPromotionView(MyActivity context, ImageSwitcher switcher, LinearLayout layout, LinearLayout layoutLoading, LinearLayout layoutLoadFaild) {
+		this.mActivity = context;
+		this.mContext = context;
+		this.mSwitcher = switcher;
+		this.commLayout = layout;
+		this.mLayoutLoadFaild = layoutLoadFaild;
+		this.mLayoutLoading = layoutLoading;
+		this.currentThread = new Thread(this);
+		initActivities();
+	}
+
+	/**
+	 * 启动自动翻页线程
+	 */
+	public void start() {
+		if (isLoaderFinish) {
+			if (this.currentThread != null && !this.currentThread.isAlive()) {
+				this.currentThread.start();
+			}
+			isDown = false;
+			onWait = true;
+			isDoing = false;
+			isDoUp = true;
+			notifyCPV();
+		}
+	}
+
+	public void stop() {
+		if (isLoaderFinish) {
+			isDown = true;
+			onChange();
+		}
+	}
+
+	/**
+	 * 初始化活动专区 控件
+	 * 
+	 * @param centerX
+	 *            旋转中心轴坐标
+	 * @param commIndex
+	 *            索引下标
+	 * @param touchListener
+	 *            触摸监听处理
+	 * @return imageSwitcher
+	 */
+	private ImageSwitcher initActivities() {
+		int centerX = DPIUtil.getWidth() / 2;// 旋转中心轴
+		leftAnimation = new Rotate3d(0, -90, centerX, 0);
+		rightAnimation = new Rotate3d(90, 0, centerX, 0);
+		leftAnimation.setFillAfter(true);
+		leftAnimation.setDuration(500);
+		rightAnimation.setFillAfter(true);
+		rightAnimation.setDuration(500);
+
+		final Animation.AnimationListener listener = new Animation.AnimationListener() {
+			@Override
+			public void onAnimationStart(Animation animation) {
+				// if (Log.D) {
+				// System.out.println("onAnimationStart");
+				// }
+				lockTouch = true;// 上锁
+			}
+
+			@Override
+			public void onAnimationRepeat(Animation animation) {
+
+			}
+
+			@Override
+			public void onAnimationEnd(Animation animation) {
+				// if (Log.D) {
+				// System.out.println("onAnimationEnd");
+				// }
+				lockTouch = false;// 解锁
+			}
+		};
+		leftAnimation.setAnimationListener(listener);
+		rightAnimation.setAnimationListener(listener);
+		setAnimation(0);
+		// 必须保留点击监听 否则手势监听OnFilng()监听不到
+		mSwitcher.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View v) {
+			}
+		});
+		initCommercial();
+		return mSwitcher;
+	}
+
+	/**
+	 * 唤醒自动切换线程
+	 */
+	private void notifyCPV() {
+		synchronized (currentThread) {
+			if (Log.D) {
+				Log.d(TAG, "down currentThread.notify()");
+			}
+			currentThread.notify();
+		}
+	}
+
+	/**
+	 * 初始化活动专区
+	 */
+	private void initCommercial() {
+		// 活动专区 手势监听实现类
+		final IGestureListener iGesture = new IGestureListener(mSwitcher.getParent(), new TouchFlingActionListener() {
+
+			@Override
+			public void previous() {
+				doPrevious(false);
+			}
+
+			@Override
+			public void next() {
+				doNext(false);
+			}
+
+			@Override
+			public void startActivity() {
+				doStartActivity();
+			}
+		});
+
+		final GestureDetector detector = new GestureDetector(iGesture);
+		mSwitcher.setOnTouchListener(new View.OnTouchListener() {
+			@Override
+			public boolean onTouch(View v, MotionEvent event) {
+				boolean flag = false;
+
+				if (Log.D) {
+					Log.d(TAG, " -->>onTouch() " + lockTouch);
+				}
+				switch (event.getAction()) {
+				case MotionEvent.ACTION_DOWN:
+					if (Log.D) {
+						Log.d(TAG, "ACTION_DOWN");
+					}
+					isDown = true;
+					notifyCPV();
+					break;
+
+				case MotionEvent.ACTION_UP:
+					if (Log.D) {
+						Log.d(TAG, "ACTION_UP");
+					}
+					isDoUp = true;
+					break;
+				case MotionEvent.ACTION_CANCEL:
+					if (Log.D) {
+						Log.d(TAG, "ACTION_CANCEL");
+					}
+					isDoUp = true;
+					break;
+
+				}
+				if (!lockTouch) {
+					flag = detector.onTouchEvent(event);
+				}
+				if (isDoUp) {
+					doUp();
+					isDoUp = false;
+				}
+
+				return flag;
+			}
+
+			private void doUp() {
+				isDown = false;
+				onWait = true;
+				isDoing = false;
+				synchronized (currentThread) {
+					if (Log.D) {
+						Log.d(TAG, "up currentThread.notify()");
+					}
+					currentThread.notify();
+				}
+			}
+		});
+	}
+
+	// private void setTransition() {
+	// final String[] array = { "3D特效", "普通特效" };
+	// new AlertDialog.Builder(mContext).setAdapter(new ArrayAdapter<String>(mContext, android.R.layout.simple_list_item_1, array), new DialogInterface.OnClickListener() {
+	//
+	// @Override
+	// public void onClick(DialogInterface dialog, int which) {
+	// setAnimation(which);
+	// }
+	// }).show();
+	// }
+
+	private void setImage(Drawable drawable) {
+		if (drawable != null) {
+			mSwitcher.setImageDrawable(drawable);
+		} else {
+			if (Log.D) {
+				Log.d(TAG, "drawable is null isOnline=" + isOnline);
+			}
+			if (isOnline) {
+				mSwitcher.setImageDrawable(new ExceptionDrawable(mContext, mContext.getString(R.string.loading)));
+			} else {
+				mSwitcher.setImageDrawable(new ExceptionDrawable(mContext, mContext.getString(R.string.no_image)));
+			}
+		}
+	}
+
+	/**
+	 * 设置活动区 动画效果
+	 * 
+	 * @param context
+	 * @param mSwitcher
+	 * @param type
+	 *            0-3D旋转 ，1-左进右出，2-右进左出
+	 */
+	private void setAnimation(int type) {
+		switch (type) {
+		case 0:
+			rotate3d();
+			break;
+		case 1:
+			push_left();
+			break;
+		case 2:
+			push_right();
+			break;
+		default:
+			rotate3d();
+			break;
+		}
+		this.type = type;
+	}
+
+	private void rotate3d() {
+		mSwitcher.setInAnimation(rightAnimation);
+		mSwitcher.setOutAnimation(leftAnimation);
+	}
+
+	// private void in_out(){
+	// mSwitcher.setInAnimation(mContext, R.anim.view_in);
+	// mSwitcher.setOutAnimation(mContext,R.anim.view_out);
+	// }
+
+	/**
+	 * 右进左出
+	 * 
+	 * @param context
+	 * @param mSwitcher
+	 */
+	private void push_right() {
+		mSwitcher.setInAnimation(AnimationUtils.loadAnimation(mContext, R.anim.push_right_in));
+		mSwitcher.setOutAnimation(AnimationUtils.loadAnimation(mContext, R.anim.push_right_out));
+	}
+
+	/**
+	 * 左进右出
+	 * 
+	 * @param context
+	 * @param mSwitcher
+	 */
+	private void push_left() {
+		mSwitcher.setInAnimation(AnimationUtils.loadAnimation(mContext, R.anim.push_left_in));
+		mSwitcher.setOutAnimation(AnimationUtils.loadAnimation(mContext, R.anim.push_left_out));
+	}
+
+	public void getActivities() {
+		/** 活动监听实现 **/
+		final OnCommercialListener onCommercialListener = new OnCommercialListener() {
+
+			@Override
+			public void onSuccess(final int index, final String key) {// 每个图加载成功
+				if (Log.D) {
+					Log.d(TAG, "onSuccess() index -->> " + index);
+				}
+
+				if ((index == commIndex) && (!isEmpty() && size() > 0)) {// 加载第一个图片时 显示活动栏
+					showActivities(index, key);
+				}
+			}
+
+			@Override
+			public void onSyncronizotionParams(ArrayList<Commercial> list) {// 刚刚获取json数据后执行，生成所有指示灯
+				if (Log.D) {
+					Log.d(TAG, "onSyncronizotionParams list -->> " + list);
+				}
+				show();
+				if (commercialsList.size() > 1) {
+					isLoaderFinish = true;
+					commIndex = 0;
+					oldIndex = 0;
+					start();
+				}
+			}
+
+			@Override
+			public void onError(int index, String key, HttpError error) {// 图片加载失败
+				if (Log.D) {
+					Log.d(TAG, "onError() currentIndex=" + index + " commercialList size=" + size());
+				}
+				if (!isEmpty() && size() > 0 && index < size() && index == commIndex) {
+					// 当前图片加载错误
+					showActivities(index, null);
+				} else {
+					if (Log.D) {
+						Log.d(TAG, "onError() commercialList is null or size <= 0");
+					}
+				}
+			}
+
+			@Override
+			public void onFinish() {// 所有图片加载完后执行
+				if (Log.D) {
+					Log.d(TAG, "onFinish()");
+				}
+				if (commercialsList != null && commercialsList.size() > 1) {
+					isLoaderFinish = true;
+					// 当活动列表 不为空 且size大于1时 启动自动切换线程
+				}
+
+			}
+		};
+		getActivities(onCommercialListener);
+	}
+
+	/**
+	 * 加载活动列表数据 及 图片资源
+	 * 
+	 * @param pool
+	 *            HttpGroup
+	 * @param _onAllListener
+	 *            图片处理监听
+	 * @param listener
+	 *            列表数据同步接口
+	 */
+	public void getActivities(final OnCommercialListener listener) {
+		isOnline = true;
+		final HttpGroup.OnCommonListener onAllListener = new HttpGroup.OnCommonListener() {
+
+			@Override
+			public void onReady(HttpSettingParams httpSettingParams) {
+
+			}
+
+			@Override
+			public void onError(HttpError error) {
+				if (Log.D) {
+					Log.d(TAG, "getActivities -->> onError() commercialList is null");
+				}
+				mActivity.post(new Runnable() {
+					public void run() {
+						mLayoutLoadFaild.setVisibility(View.VISIBLE);
+						mLayoutLoading.setVisibility(View.GONE);
+						mSwitcher.setVisibility(View.GONE);
+						commLayout.setVisibility(View.GONE);
+					}
+				});
+			}
+
+			@Override
+			public void onEnd(HttpResponse httpResponse) {
+				mActivity.post(new Runnable() {
+					public void run() {
+						mLayoutLoadFaild.setVisibility(View.GONE);
+						mLayoutLoading.setVisibility(View.GONE);
+					}
+				});
+				
+				JSONArrayPoxy jsonArray;
+				if (Log.D) {
+					Log.d(TAG, "getActivities ->> onEnd() httpResponse.getJSONObject()=" + httpResponse.getJSONObject());
+				}
+
+				try {
+					isActivityLoader = true;
+					jsonArray = httpResponse.getJSONObject().getJSONArrayOrNull("activityList");
+					if (jsonArray == null) {
+						return;
+					}
+					commercialsList = Commercial.toList(jsonArray, Commercial.FOCUSACTIVITY);
+					if (null == commercialsList || commercialsList.size() < 1) {// 判断活动列表是否为空
+						if (Log.D) {
+							Log.d(TAG, "getActivities -->> " + "commercialList is null or size < 1");
+						}
+						return;
+					}
+					// 活动列表不为空 且size大于0时
+					if (commercialsList != null && commercialsList.size() > 0) {
+						if (commercialCache == null)
+							commercialCache = new HashMap<String, Drawable>();// 初始化图片集合
+						listener.onSyncronizotionParams(commercialsList);// 同步列表数据
+						getActivitesImage(0, commercialsList, commercialsList.get(0), mActivity.getHttpGroupaAsynPool(), listener);// 联网加载图片
+					}
+				} catch (Exception e) {
+					if (Log.D) {
+						e.printStackTrace();
+					}
+				} finally {
+					listener.onFinish();
+				}
+			}
+
+		};
+
+		try {
+			HttpSetting httpSetting = new HttpSetting();
+			httpSetting.setFunctionId("indexFocusActivity");
+			httpSetting.putJsonParam("page", "" + 1);
+			httpSetting.putJsonParam("pagesize", "" + 12);
+			httpSetting.setListener(onAllListener);
+			httpSetting.setEffect(HttpSetting.EFFECT_NO);
+			httpSetting.setNotifyUser(true);
+			httpSetting.setAlertErrorDialogType(HttpSetting.ERROR_DIALOG_TYPE_SETUP_CANCEL);
+//			httpSetting.setLocalFileCache(true);
+//			httpSetting.setLocalFileCacheTime(CacheTimeConfig.HOME_ACTIVTIES);
+			httpSetting.setNeedGlobalInitialization(false);
+			if(null != mHttpGroup){
+				mHttpGroup.add(httpSetting);
+			}else{
+				mActivity.getHttpGroupaAsynPool().add(httpSetting);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 获取活动图片资源
+	 * 
+	 * @param url
+	 *            图片URL地址
+	 * @param onAllListener
+	 *            处理接口
+	 * @param pool
+	 *            HttpGroup
+	 */
+	private void getActivitesImage(final int index, final ArrayList<Commercial> commercialList, final Commercial comm, final HttpGroup pool, final OnCommercialListener listener) {
+		final String key = comm.getHorizontalImg();
+		if (Log.D) {
+			Log.d(TAG, "getActivitesImage url:" + key);
+		}
+		try {
+			HttpSetting httpSetting = new HttpSetting();
+			httpSetting.setType(HttpGroupSetting.TYPE_IMAGE);
+			httpSetting.setEffect(HttpSetting.EFFECT_NO);
+			httpSetting.setUrl(key);
+			httpSetting.setListener(new HttpGroup.CustomOnAllListener() {
+
+				@Override
+				public void onProgress(int max, int progress) {
+				}
+
+				@Override
+				public void onError(HttpError error) {
+					if (Log.D) {
+						Log.d(TAG, "getActivitesImage ->> " + error.toString());
+					}
+					listener.onError(index, key, error);
+					loadNext(index + 1);
+				}
+
+				@Override
+				public void onEnd(HttpResponse httpResponse) {
+					BitmapDrawable drawable = null;
+					try {
+						Bitmap bmp = ImageUtil.createBitmap(InputWay.createInputWay(httpResponse), 0, 0);
+						if (bmp != null) {
+							int layout_width = mSwitcher.getWidth();
+							if (layout_width <= 0) {
+								layout_width = DPIUtil.getWidth() - DPIUtil.dip2px(10);
+							}
+							final float img_width = bmp.getWidth();
+							final float img_height = bmp.getHeight();
+							final float scale = layout_width / img_width;
+							if (Log.D) {
+								Log.d(TAG, "getActivitesImage -->> mSwitcher.getWidth=" + layout_width + "\timg_width=" + img_width + "\timg_height=" + img_height + "\tscale=" + scale + "\tdensity="
+										+ DPIUtil.getDensity());
+							}
+							drawable = new BitmapDrawable(bmp);
+						}
+					} catch (Exception e) {
+						e.printStackTrace();
+						Bitmap bmp = ImageUtil.createBitmap(InputWay.createInputWay(httpResponse), 0, 0);
+						drawable = new BitmapDrawable(bmp);
+					}
+
+					if (drawable != null && !TextUtils.isEmpty(key)) {
+						if (Log.D) {
+							Log.d(TAG, "getActivitesImage -->> getIntrinsicWidth=" + drawable.getIntrinsicWidth() + "\tgetIntrinsicHeight=" + drawable.getIntrinsicHeight());
+						}
+						commercialCache.put(key, drawable);
+					}
+
+					listener.onSuccess(index, key);
+					loadNext(index + 1);
+				}
+
+				@Override
+				public void onStart() {
+				}
+
+				private void loadNext(int index) {
+					if (Log.D) {
+						Log.d(TAG, "getActivitesImage -->> loadNext()" + index);
+					}
+					if (index < commercialList.size()) {
+						getActivitesImage(index, commercialList, commercialList.get(index), pool, listener);
+					} else {
+						isOnline = false;
+					}
+				}
+			});
+			pool.add(httpSetting);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * 回退
+	 * 
+	 * @param imageList
+	 * @param index
+	 * @return
+	 */
+	private Drawable previous(Drawable drawable) {
+		switch (type) {
+		case 0:
+			leftAnimation.reverseTransformation(true);
+			rightAnimation.reverseTransformation(true);
+			break;
+		case 1:
+			push_right();
+			break;
+		}
+		return drawable;
+	}
+
+	/**
+	 * 前进
+	 * 
+	 * @param imageList
+	 * @param index
+	 * @return
+	 */
+	private Drawable next(Drawable drawable) {
+		switch (type) {
+		case 0:
+			leftAnimation.reverseTransformation(false);
+			rightAnimation.reverseTransformation(false);
+			break;
+		case 1:
+			push_left();
+			break;
+		}
+		return drawable;
+	}
+
+	/**
+	 * 回退
+	 */
+	public void doPrevious(boolean isAuto) {
+		if (isDoing) {
+			return;
+		} else if (!isAuto) {
+			isDoing = true;
+		}
+		if (Log.D) {
+			Log.d(TAG, "doPrevious() commIndex=" + commIndex);
+		}
+		if (!isEmpty()) {
+			commIndex = ++commIndex > size() - 1 ? 0 : commIndex++;
+			// if (commIndex == size() - 1) {
+			// isReverse = true;
+			// }
+			final String key = commercialsList.get(commIndex).getHorizontalImg();
+			setImage(next(getCacheDrawable(key)));
+			if (size() > 1) {
+				closeNight(oldIndex);// 关灯
+				View v = commLayout.getChildAt(commIndex);
+				oldIndex = commIndex;
+				if (v != null) {
+					v.setBackgroundResource(R.drawable.android_activities_cur);// 点亮
+				}
+			}
+		} else {
+			mSwitcher.startAnimation(AnimationUtils.loadAnimation(mContext, R.anim.shake));// 当下标到头的时候 播放动画 表示
+		}
+	}
+
+	/**
+	 * 前进
+	 */
+	public void doNext(boolean isAuto) {
+		if (isDoing) {
+			return;
+		} else if (!isAuto) {
+			isDoing = true;
+		}
+		if (Log.D) {
+			Log.d(TAG, "doNext() commIndex=" + commIndex);
+		}
+		if (!isEmpty()) {
+			commIndex = --commIndex < 0 ? size() - 1 : commIndex--;
+			// if (commIndex == 0) {
+			// isReverse = false;
+			// }
+			final String key = commercialsList.get(commIndex).getHorizontalImg();
+			setImage(previous(getCacheDrawable(key)));
+			if (size() > 1) {
+				closeNight(oldIndex);// 关灯
+				View v = commLayout.getChildAt(commIndex);
+				oldIndex = commIndex;
+				if (v != null) {
+					v.setBackgroundResource(R.drawable.android_activities_cur);// 点亮
+				}
+			}
+		} else {
+			mSwitcher.startAnimation(AnimationUtils.loadAnimation(mContext, R.anim.shake));// 当下标到头的时候 播放动画 表示
+		}
+	}
+
+	public void doStartActivity() {
+		commIndex = commIndex < 0 ? 0 : commIndex;
+		commIndex = commIndex > size() - 1 ? size() - 1 : commIndex;
+		final Commercial commercial = commercialsList.get(commIndex);
+
+		if (Log.D) {
+			Log.d(TAG, "commercial.getType()=" + commercial.getType());
+		}
+
+		if (commercial.getType() == 0) { // 如果type=0，进入原来的活动列表
+			Intent i = new Intent(mContext, ProductListActivity.class);
+			Bundle b = new Bundle();
+
+			b.putSerializable("commercial", commercial);
+			i.putExtras(b);
+			i.putExtra(SourceEntity.INTENT_EXTRA_ARG_SOURCE, new SourceEntity(SourceEntity.SOURCE_TYPE_HOME_ACTIVITY, commercial.getId()));
+			mActivity.startActivityInFrame(i);
+		} else if (commercial.getType() == 1) { // 如果type=1，进入新的促销列表
+			Intent intent = new Intent(mContext, PromotionActivity.class);
+			mActivity.startActivityInFrame(intent);
+		} else if (commercial.getType() == 2) { // 如果type=2，走m端
+
+			CommonUtil.queryBrowserUrl(commercial.getAction(), new URLParamMap(), new BrowserUrlListener() {
+				@Override
+				public void onComplete(final String url) {
+					mActivity.post(new Runnable() {
+						public void run() {
+							Intent intent = new Intent(mContext, WebActivity.class);
+							intent.putExtra("url", url);
+							mActivity.startActivityInFrame(intent);
+						}
+					});
+				}
+			});
+		}
+
+	}
+
+	public void createCursor(int size) {
+		if (Log.D) {
+			Log.d(TAG, " -->> createCursor size = " + size);
+		}
+		this.commLayout.removeAllViews();
+
+		for (int i = 0; i < size && size > 1; i++) {
+			final View item = ImageUtil.inflate(R.layout.cursor_item, null);
+			int w = (commLayout.getWidth() - DPIUtil.dip2px(1) * (size - 2)) / size;
+			if (Log.D) {
+				Log.d(TAG, " -->> createCursor w = " + w);
+			}
+			final LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(w, DPIUtil.dip2px(5));
+			params.setMargins(DPIUtil.dip2px(1), 0, DPIUtil.dip2px(1), 0);
+			item.setLayoutParams(params);
+			item.setBackgroundResource(R.drawable.android_activities_bg);
+			this.commLayout.addView(item);
+		}
+	}
+
+	/**
+	 * 关灯
+	 * 
+	 * @param view
+	 * @param size
+	 */
+	public void closeNight(int index) {
+		if (commLayout != null) {
+			final View v = commLayout.getChildAt(index);
+			if (v != null) {
+				v.setBackgroundResource(R.drawable.android_activities_bg);
+			}
+		}
+	}
+
+	/**
+	 * 获取缓存图片
+	 * 
+	 * @param key
+	 *            url地址
+	 * @return Drawable
+	 */
+	public Drawable getCacheDrawable(String key) {
+		if (commercialCache == null || TextUtils.isEmpty(key)) {
+			return null;
+		}
+		return commercialCache.get(key);
+	}
+
+	/**
+	 * commercialsList 是否为空
+	 * 
+	 * @return boolean
+	 */
+	public boolean isEmpty() {
+		return (commercialsList == null);
+	}
+
+	public void removeDrawable(String key) {
+		if (commercialCache != null) {
+			commercialCache.remove(key);
+		}
+	}
+
+	public void clearDrawable() {
+		if (commercialCache != null) {
+			commercialCache.clear();
+		}
+	}
+
+	public int size() {
+		return (commercialsList == null ? 0 : commercialsList.size());
+	}
+
+	/**
+	 * 显示活动界面
+	 * 
+	 * @param comm
+	 */
+	public void showActivities(final int index, final String key) {
+		if (Log.D) {
+			Log.d(TAG, "showActivities()");
+		}
+		mActivity.post(new Runnable() {
+			@Override
+			public void run() {
+				// 显示活动图片
+				Drawable drawable = null;
+				if (commercialCache != null && !TextUtils.isEmpty(key)) {
+					drawable = commercialCache.get(key);// 获取网络图片
+				} else {// 加载默认图片
+					drawable = new ExceptionDrawable(mContext, mContext.getString(R.string.no_image));
+				}
+
+				mSwitcher.setImageDrawable(drawable);
+				if (Log.D) {
+					Log.d("getActivitesImage", " -->> Switcher width=" + mSwitcher.getWidth() + "\theight=" + mSwitcher.getHeight());
+				}
+				if (commercialsList.size() > 1 && commLayout.getChildAt(index) != null) {
+					commLayout.getChildAt(index).setBackgroundResource(R.drawable.android_activities_cur);
+				}
+				rotate3d();
+			}
+		});
+	}
+
+	// private int nightLampWith;// 指示灯宽
+
+	// /**
+	// * 设置指示灯宽度
+	// *
+	// * @param width
+	// */
+	// public void setNightLampWidth(int width) {
+	// nightLampWith = width;
+	// }
+
+	public void show() {
+		mActivity.post(new Runnable() {
+
+			@Override
+			public void run() {
+				createCursor(size());// 生成指示灯
+				// 初始化显示 首个图片加载
+				mSwitcher.setVisibility(View.VISIBLE);
+				commLayout.setVisibility(View.VISIBLE);
+				mSwitcher.setImageDrawable(new ExceptionDrawable(mContext, mContext.getString(R.string.loading)));
+				if (commLayout.getChildAt(0) != null)
+					commLayout.getChildAt(0).setBackgroundResource(R.drawable.android_activities_cur);// 点亮
+			}
+		});
+	}
+
+	@Override
+	public void run() {
+		try {
+			while (true) {
+				if (!isDown) {
+					synchronized (currentThread) {
+						if (Log.D) {
+							Log.d(TAG, "currentThread.wait(5000)");
+						}
+						currentThread.wait(5000);
+					}
+					if (isDown) {
+						synchronized (currentThread) {
+							if (Log.D) {
+								Log.d(TAG, "currentThread.wait()");
+							}
+							currentThread.wait();
+						}
+					}
+					if (onWait) {
+						onWait = false;
+						continue;
+					}
+					if (Log.D) {
+						Log.d(TAG, "post to UI");
+					}
+					onChange();
+				}
+			}
+		} catch (Exception e) {
+			if (Log.D) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	/**
+	 * 改变当前选项
+	 */
+	private void onChange() {
+		this.mActivity.post(new Runnable() {
+			@Override
+			public void run() {
+				// if (isReverse) {
+				// doNext(true);
+				// } else {
+				doPrevious(true);
+				// }
+			}
+		});
+	}
+
+	/**
+	 * 活动专区 联网图片监听接口
+	 * 
+	 * @author longkefan
+	 * 
+	 */
+	public interface OnCommercialListener {
+		/** 同步数据 **/
+		public void onSyncronizotionParams(ArrayList<Commercial> list);
+
+		/** 图片读取错误 **/
+		public void onError(int index, String key, HttpError error);
+
+		/** 图片读取成功 **/
+		public void onSuccess(int index, String key);
+
+		/** 最后执行的方法 **/
+		public void onFinish();
+	}
+
+	@Override
+	public void resetNoLoad() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void setHttpGroup(HttpGroup httpGroup) {
+		mHttpGroup = httpGroup;
+	}
+}

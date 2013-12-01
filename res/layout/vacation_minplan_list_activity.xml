@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <!-- 界面Title -->
+
+    <include
+        android:id="@+id/common_title"
+        layout="@layout/head" />
+
+
+
+    <ListView
+        android:id="@+id/vacation_minplan_listview"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_below="@id/common_title"
+        android:cacheColorHint="#00000000"
+        android:fadeScrollbars="true" 
+        android:visibility="gone">
+    </ListView>
+</RelativeLayout>

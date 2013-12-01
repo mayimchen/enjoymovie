@@ -1,0 +1,115 @@
+package com.jingdong.app.mall.utils.ui;
+
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.Paint;
+import android.graphics.Paint.Style;
+import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
+import android.text.TextPaint;
+import android.text.TextUtils;
+
+import com.jingdong.app.mall.utils.Log;
+
+public class CountdownDrawable extends Drawable {
+
+	private CharSequence text;
+
+	private TextPaint paint;
+
+	private float textSize = 18;
+
+	public CountdownDrawable(Context context) {
+		paint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+		paint.setAntiAlias(true);
+		paint.setStyle(Style.FILL);
+		paint.setTextSize(18);
+	}
+
+	public CountdownDrawable(Context context, CharSequence text) {
+		this(context);
+		this.text = text;
+	}
+
+	@Override
+	public void draw(Canvas canvas) {
+		try {
+			if (!TextUtils.isEmpty(text) && text.length() == 11) {
+
+				canvas.save();
+
+				final Rect rect = getBounds();
+				final Rect padding = new Rect();
+				getPadding(padding);
+				
+				float x = rect.left + padding.left;
+				float y = rect.top + padding.top + textSize + 1;
+				
+				final String cs1 = text.subSequence(0, 2).toString();
+				final String cs2 = text.subSequence(2, 4).toString();
+				final String cs3 = text.subSequence(4, 5).toString();
+				final String cs4 = text.subSequence(5, 7).toString();
+				final String cs5 = text.subSequence(7, 8).toString();
+				final String cs6 = text.subSequence(8, 10).toString();
+				final String cs7 = text.subSequence(10, text.length()).toString();
+				
+				paint.setColor(Color.BLACK);
+				canvas.drawText(cs1, 0, cs1.length(), x, y, paint);
+				
+				paint.setColor(Color.RED);
+				canvas.drawText(cs2, 0, cs2.length(), x + paint.measureText(cs1), y, paint);
+				
+				paint.setColor(Color.BLACK);
+				canvas.drawText(cs3, 0, cs3.length(), x + paint.measureText(cs1 + cs2), y, paint);
+				
+				paint.setColor(Color.RED);
+				canvas.drawText(cs4, 0, cs4.length(), x + paint.measureText(cs1 + cs2 + cs3), y, paint);
+				
+				paint.setColor(Color.BLACK);
+				canvas.drawText(cs5, 0, cs5.length(), x + paint.measureText(cs1 + cs2 + cs3 + cs4), y, paint);
+				
+				paint.setColor(Color.RED);
+				canvas.drawText(cs6, 0, cs6.length(), x + paint.measureText(cs1 + cs2 + cs3 + cs4 + cs5), y, paint);
+				
+				paint.setColor(Color.BLACK);
+				canvas.drawText(cs7, 0, cs7.length(), x + paint.measureText(cs1 + cs2 + cs3 + cs4 + cs5 + cs6), y, paint);
+
+				canvas.restore();
+
+			}
+		} catch (Exception e) {
+			if (Log.D) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	@Override
+	public void setAlpha(int alpha) {
+
+	}
+
+	@Override
+	public void setColorFilter(ColorFilter cf) {
+
+	}
+
+	@Override
+	public int getOpacity() {
+		return 0;
+	}
+
+	public void setText(CharSequence text) {
+		this.text = text;
+	}
+
+	public void setTextSize(float textSize) {
+		this.textSize = textSize;
+		if (paint != null) {
+			paint.setTextSize(textSize);
+		}
+	}
+
+}

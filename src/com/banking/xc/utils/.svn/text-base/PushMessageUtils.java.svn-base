@@ -1,0 +1,396 @@
+package com.jingdong.app.mall.utils;
+
+import java.util.ArrayList;
+import java.util.Date;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+import android.text.TextUtils;
+
+import com.jingdong.app.mall.config.Configuration;
+import com.jingdong.app.mall.constant.Constants;
+import com.jingdong.app.mall.database.table.PushMessageTable;
+import com.jingdong.app.mall.entity.BaseMessage;
+import com.jingdong.app.mall.entity.MessageCategory;
+import com.jingdong.app.mall.login.LoginUser;
+import com.jingdong.app.mall.utils.HttpGroup.HttpError;
+import com.jingdong.app.mall.utils.HttpGroup.HttpResponse;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSetting;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSettingParams;
+import com.jingdong.app.mall.utils.HttpGroup.OnCommonListener;
+
+public class PushMessageUtils {
+
+	public static final long DEFAULT_GET_TOKEN_DELAY = Configuration.getLongProperty(Configuration.DEFAULT_FIRST_GET_TOKEN_DELAY);
+	private static final String TAG = "PushMessageUtils"; // 默认获取Token时间
+
+	/**
+	 * 注册deviceId，返回deviceToken
+	 * 
+	 * @param listener
+	 */
+	public static void regPushMessageToken(final OnCommonListener listener, final HttpGroup otherGroup, final HttpSetting otherSetting) {
+		// 如果已经获取过
+		if (!TextUtils.isEmpty(getDeviceTokenFromLocal())) {
+			return;
+		}
+
+		HttpSetting setting = new HttpSetting();
+		setting.putJsonParam("appName", "jdapp");
+		setting.setFunctionId("registerDevice");
+		setting.setHost(Configuration.getProperty(Configuration.MSG_HOST));
+		setting.setNotifyUser(false);
+		setting.setThisFunctionMustBeExcute(true);
+		// setting.setUseLocalCookies(true);
+		setting.setListener(new OnCommonListener() {
+
+			@Override
+			public void onReady(HttpSettingParams httpSettingParams) {
+				if (listener != null) {
+					listener.onReady(httpSettingParams);
+				}
+			}
+
+			@Override
+			public void onError(HttpError error) {
+				if (listener != null) {
+					listener.onError(error);
+				}
+			}
+
+			@Override
+			public void onEnd(HttpResponse httpResponse) {
+				String token = httpResponse.getJSONObject().getStringOrNull("devicetoken");
+				if (TextUtils.isEmpty(token)) {
+					return;
+				}
+				if (listener != null) {
+					listener.onEnd(httpResponse);
+				}
+				PushMessageUtils.saveDeviceToken(token);
+				// 注册之后的其他任务
+				if (otherGroup != null && otherSetting != null) {
+					otherSetting.putJsonParam("devicetoken", token);
+					otherGroup.add(otherSetting);
+				}
+			}
+		});
+		HttpGroupUtils.getHttpGroupaAsynPool().add(setting);
+	}
+
+	/**
+	 * 从本地获取deviceToken
+	 * 
+	 * @return
+	 */
+	public static String getDeviceTokenFromLocal() {
+		SharedPreferences preferences = CommonUtil.getJdSharedPreferences();
+		String token = preferences.getString(Constants.SHARED_PREFERENCES_MSG_DEVICE_TOKEN, "");
+		if (Log.D) {
+			Log.d(TAG, " getDeviceTokenFromLocal : " + token);
+		}
+
+		return token;
+	}
+
+	/**
+	 * 保存绑定状态
+	 */
+	public static void saveBindState(boolean state) {
+		Editor editor = CommonUtil.getJdSharedPreferences().edit();
+		editor.putBoolean(Constants.SHARED_PREFERENCES_MSG_HAS_BIND, state);
+		editor.commit();
+	}
+
+	/**
+	 * 获取绑定状态
+	 */
+	public static Boolean getBindState() {
+		SharedPreferences preferences = CommonUtil.getJdSharedPreferences();
+		return preferences.getBoolean(Constants.SHARED_PREFERENCES_MSG_HAS_BIND, false);
+	}
+
+	/**
+	 * 保存deviceToken
+	 */
+	public static void saveDeviceToken(String token) {
+		Editor editor = CommonUtil.getJdSharedPreferences().edit();
+		editor.putString(Constants.SHARED_PREFERENCES_MSG_DEVICE_TOKEN, token);
+		editor.commit();
+	}
+
+	/**
+	 * 保存未读的消息id 消息推送关键日志
+	 */
+	public static void saveUnReadMsgIds(String msgIds) {
+		if (TextUtils.isEmpty(msgIds)) {
+			return;
+		}
+		Editor editor = CommonUtil.getJdSharedPreferences().edit();
+		editor.putString(Constants.SHARED_PREFERENCES_LOG_MSG_UNREAD_IDS, msgIds + "|" + FormatUtils.formatDate(new Date()));
+		editor.commit();
+	}
+
+	/**
+	 * 保存最后通知的消息id与时间   消息推送关键日志
+	 */
+	public static void saveNotifyIdAndTime(String msgId) {
+
+		if (TextUtils.isEmpty(msgId)) {
+			return;
+		}
+
+		Editor editor = CommonUtil.getJdSharedPreferences().edit();
+		editor.putString(Constants.SHARED_PREFERENCES_LOG_MSG_NOTIFY_ID_AND_TIME, msgId + "|" + FormatUtils.formatDate(new Date()));
+		editor.commit();
+	}
+
+	/**
+	 * 绑定用户
+	 * 
+	 * @param delay
+	 * @param context
+	 */
+	public static void bindUser(final Context context, final long delay) {
+		if (!LoginUser.hasLogin()) {
+			AlarmUtils.alarmPushMsgTask(context, delay);
+			return;
+		}
+
+		if (getBindState() == true) {
+			AlarmUtils.alarmPushMsgTask(context, delay);
+			return;
+		}
+
+		final HttpSetting setting = new HttpSetting();
+		setting.setFunctionId("bingding");
+		setting.setHost(Configuration.getProperty(Configuration.MSG_HOST));
+		setting.setNotifyUser(false);
+		setting.setUseLocalCookies(true);
+		setting.setThisFunctionMustBeExcute(true);
+		setting.setListener(new OnCommonListener() {
+			@Override
+			public void onReady(HttpSettingParams httpSettingParams) {
+				httpSettingParams.putJsonParam("devicetoken", getDeviceTokenFromLocal());
+			}
+
+			@Override
+			public void onError(HttpError error) {
+			}
+
+			@Override
+			public void onEnd(HttpResponse httpResponse) {
+				AlarmUtils.alarmPushMsgTask(context, delay);
+				saveBindState(true);
+			}
+		});
+		HttpGroupUtils.getHttpGroupaAsynPool().add(setting);
+	}
+
+	/**
+	 * 解绑
+	 */
+	public static void unBindUser() {
+		if (getBindState() == false) {
+			return;
+		}
+		saveBindState(false);
+		HttpSetting setting = new HttpSetting();
+		setting.setFunctionId("cancelDevice");
+		setting.setHost(Configuration.getProperty(Configuration.MSG_HOST));
+		setting.setNotifyUser(false);
+		HttpGroupUtils.getHttpGroupaAsynPool().add(setting);
+	}
+
+	/**
+	 * 根据获取的id列表和本地对比，得到需要进行notify的消息列表集合
+	 * 
+	 * @param msgIds
+	 * @return
+	 */
+	public static ArrayList<BaseMessage> initNotfyWithMessageList(ArrayList<String> msgIds) {
+		ArrayList<BaseMessage> needNotifys = new ArrayList<BaseMessage>(); // 需要提醒的id集合
+		if (msgIds == null || msgIds.size() < 1) {
+			return needNotifys;
+		}
+		ArrayList<BaseMessage> messages = PushMessageTable.getHasNotifyMessages(); // 已经提醒过的消息集合
+		for (String id : msgIds) {
+			BaseMessage temp = new BaseMessage(id, BaseMessage.UN_READ);
+			if (!TextUtils.isEmpty(id) && !messages.contains(temp)) {
+				needNotifys.add(temp);
+			}
+		}
+		if (needNotifys.size() < 1) {
+			return needNotifys;
+		}
+		PushMessageTable.insertNotifyMessages(needNotifys);
+		return needNotifys;
+	}
+
+	/**
+	 * 根据单条的消息id获取摘要信息
+	 * 
+	 * @param lastId
+	 * @param onCommonListener
+	 */
+	public static void getMessageSummaryWithMsgId(String lastId, OnCommonListener onCommonListener) {
+
+		if (TextUtils.isEmpty(lastId)) {
+			return;
+		}
+
+		HttpSetting setting = new HttpSetting();
+		setting.setFunctionId("msgSummaryList");
+		setting.setHost(Configuration.getProperty(Configuration.MSG_HOST));
+		setting.setNotifyUser(false);
+		setting.setUseLocalCookies(true);
+		setting.putJsonParam("pin", LoginUser.getLoginUserName());
+		setting.putJsonParam("msgIds", lastId);
+
+		setting.setListener(onCommonListener);
+		HttpGroupUtils.getHttpGroupaAsynPool().add(setting);
+	}
+
+	/**
+	 * 获取所有消息分类
+	 */
+	public static void getAllUserCategory(OnCommonListener onCommonListener) {
+		if (!LoginUser.hasLogin()) {
+			return;
+		}
+
+		String token = getDeviceTokenFromLocal();
+		HttpSetting setting = new HttpSetting();
+		setting.setFunctionId("getSubcribeMsgTypes");
+		setting.setHost(Configuration.getProperty(Configuration.MSG_HOST));
+		setting.setNotifyUser(false);
+		setting.putJsonParam("devicetoken", token);
+		setting.setListener(onCommonListener);
+		HttpGroup group = HttpGroupUtils.getHttpGroupaAsynPool();
+
+		if (!TextUtils.isEmpty(token)) {
+			group.add(setting);
+		} else {
+			regPushMessageToken(null, group, setting);
+		}
+	}
+
+	/**
+	 * 获取所有未读消息的id列表
+	 * 
+	 * @param onCommonListener
+	 */
+	public static void getAllUnReadMessageIds(OnCommonListener onCommonListener) {
+		HttpSetting setting = new HttpSetting();
+		setting.setFunctionId("msgUnReadIdList");
+		setting.putJsonParam("pin", LoginUser.getLoginUserName());
+		setting.setHost(Configuration.getProperty(Configuration.MSG_HOST));
+		setting.setNotifyUser(false);
+		setting.setUseLocalCookies(true);
+		setting.setListener(onCommonListener);
+		HttpGroupUtils.getHttpGroupaAsynPool().add(setting);
+	}
+
+	/**
+	 * 获取消息详情
+	 * 
+	 * @param activity
+	 * @param Object
+	 * @param onCommonListener
+	 */
+	public static void getMessageDetail(MyActivity activity, String msgId, OnCommonListener onCommonListener) {
+
+		String token = getDeviceTokenFromLocal();
+
+		HttpSetting httpSetting = new HttpGroup.HttpSetting();
+		httpSetting.setFunctionId("messageDetail");
+		httpSetting.putJsonParam("pin", LoginUser.getLoginUserName());
+		httpSetting.putJsonParam("msgId", msgId);
+		httpSetting.putJsonParam("devicetoken", token);
+		httpSetting.setHost(Configuration.getProperty(Configuration.MSG_HOST));
+		httpSetting.setNotifyUser(true);
+		httpSetting.setListener(onCommonListener);
+		HttpGroup group = activity.getHttpGroupaAsynPool();
+
+		if (!TextUtils.isEmpty(token)) {
+			group.add(httpSetting);
+		} else {
+			regPushMessageToken(null, group, httpSetting);
+		}
+
+	}
+
+	/**
+	 * 设置所有消息为已读
+	 */
+	public static void setAllMessageReaded(OnCommonListener listener) {
+
+		String token = getDeviceTokenFromLocal();
+
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setFunctionId("allMsgReaded");
+		httpSetting.setHost(Configuration.getProperty(Configuration.MSG_HOST));
+		// httpSetting.setJsonParams(params);
+		httpSetting.putJsonParam("pin", LoginUser.getLoginUserName());
+		httpSetting.putJsonParam("devicetoken", token);
+		httpSetting.setNotifyUser(false);
+		httpSetting.setListener(listener);
+		HttpGroup group = HttpGroupUtils.getHttpGroupaAsynPool();
+
+		if (!TextUtils.isEmpty(token)) {
+			group.add(httpSetting);
+		} else {
+			regPushMessageToken(null, group, httpSetting);
+		}
+
+	}
+
+	/**
+	 * 获取所有消息列表
+	 * 
+	 * @param activity
+	 * @param listener
+	 */
+	public static void getAllMessageList(MyActivity activity, OnCommonListener listener) {
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setFunctionId("allMsgList");
+		httpSetting.setPost(true);
+		httpSetting.setHost(Configuration.getProperty(Configuration.MSG_HOST));
+		httpSetting.putJsonParam("pin", LoginUser.getLoginUserName());
+		httpSetting.setListener(listener);
+		httpSetting.setNotifyUser(true);
+		activity.getHttpGroupaAsynPool().add(httpSetting);
+	}
+
+	/**
+	 * 订阅消息分类
+	 * 
+	 * @param category
+	 * @param listener
+	 */
+	public static void resetMessageCategorySubcribeState(MessageCategory category, OnCommonListener listener) {
+
+		String token = getDeviceTokenFromLocal();
+
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setFunctionId("subcribeMsgType");
+		httpSetting.setHost(Configuration.getProperty(Configuration.MSG_HOST));
+		httpSetting.putJsonParam("pin", LoginUser.getLoginUserName());
+		httpSetting.putJsonParam("appname", "jdapp");
+		httpSetting.putJsonParam("devicetoken", token);
+		httpSetting.putJsonParam("msgType", category.getType());
+		httpSetting.putJsonParam("isSubcribe", category.getIsSubcribe() + "");
+		httpSetting.setNotifyUser(false);
+		httpSetting.setListener(listener);
+		HttpGroup group = HttpGroupUtils.getHttpGroupaAsynPool();
+
+		if (!TextUtils.isEmpty(token)) {
+			group.add(httpSetting);
+		} else {
+			regPushMessageToken(null, group, httpSetting);
+		}
+
+	}
+
+}

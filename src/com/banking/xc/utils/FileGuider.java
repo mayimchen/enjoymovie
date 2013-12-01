@@ -1,0 +1,78 @@
+package com.banking.xc.utils;
+
+public class FileGuider {// TODO
+
+	private int space;// 优先选择内部存储空间或外部存储空间
+	private boolean immutable;// 当优先选择的存储空间不存在或者空间不足时可否选择另一存储空间
+	private long TotalSize;// 总空间
+	private long AvailableSize;// 可用空间
+	private String childDirName;// 子目录
+	private String fileName;// 文件名
+	private int mode;// 权限
+	private int internalType;// 内部存储空间类型
+
+	public int getSpace() {
+		return space;
+	}
+
+	public void setSpace(int space) {
+		this.space = space;
+	}
+
+	public boolean isImmutable() {
+		return immutable;
+	}
+
+	public void setImmutable(boolean immutable) {
+		this.immutable = immutable;
+	}
+
+	public long getTotalSize() {
+		return TotalSize;
+	}
+
+	public void setTotalSize(long totalSize) {
+		TotalSize = totalSize;
+	}
+
+	public long getAvailableSize() {
+		return AvailableSize;
+	}
+
+	public void setAvailableSize(long availableSize) {
+		AvailableSize = availableSize;
+	}
+
+	public String getChildDirName() {
+		return childDirName;
+	}
+
+	public void setChildDirName(String childDirName) {
+		this.childDirName = childDirName;
+	}
+
+	public String getFileName() {
+		return fileName;
+	}
+
+	public void setFileName(String fileName) {
+		this.fileName = fileName;
+	}
+
+	public int getMode() {
+		return mode;
+	}
+
+	public void setMode(int mode) {
+		this.mode = mode;
+	}
+
+	public int getInternalType() {
+		return internalType;
+	}
+
+	public void setInternalType(int internalType) {
+		this.internalType = internalType;
+	}
+
+}

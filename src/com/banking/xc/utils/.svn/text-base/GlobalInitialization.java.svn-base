@@ -1,0 +1,556 @@
+package com.jingdong.app.mall.utils;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+import android.widget.Toast;
+
+import com.jingdong.app.mall.MainActivity;
+import com.jingdong.app.mall.MyApplication;
+import com.jingdong.app.mall.config.Configuration;
+import com.jingdong.app.mall.constant.Constants;
+import com.jingdong.app.mall.utils.CPAUtils.GlobalInitializationInterface;
+import com.jingdong.app.mall.utils.HttpGroup.HttpError;
+import com.jingdong.app.mall.utils.HttpGroup.HttpResponse;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSetting;
+import com.jingdong.app.mall.utils.HttpGroup.OnAllListener;
+
+/**
+ * 全局初始化类（单例模式）
+ */
+public class GlobalInitialization implements GlobalInitializationInterface {
+
+	private static GlobalInitialization globalInitialization;
+	
+	// 各阻塞任务的token
+	private static final String BLOCK_TASK_TOKEN_SERVER_CONFIG = "BLOCK_TASK_TOKEN_SERVER_CONFIG";
+	private static final String BLOCK_TASK_TOKEN_REGISTER_DEVICE = "BLOCK_TASK_TOKEN_REGISTER_DEVICE";
+
+	private MyActivity myActivity;
+
+	private HttpGroup httpGroup;
+
+	/**
+	 * 为了方便编辑首选项而已
+	 */
+	private SharedPreferences sharedPreferences;
+	
+	private ArrayList<ConfigLoadedListener> configListenerList = new ArrayList<ConfigLoadedListener>();
+	
+	
+	/**
+	 * 在各个全局初始化任务开始之前，把需要阻塞其它线程的任务token加入blockTaskTokenSet，
+	 * 最后用于判断是否已经完成所有阻塞任务
+	 */
+	private Set<String> blockTaskTokenSet = new HashSet<String>();
+
+	private boolean alreadyDevice = false;
+	private boolean alreadyConfig = false;
+
+	/**
+	 * cpa接口
+	 */
+	private CPAUtils.Processor cpaProcessor;// cpa 处理器
+
+	private HttpGroup.HttpGroupSetting httpGroupSetting;
+	
+	private GlobalInitializationListener giListener; //初始化监听，用于广播启动后工作执行完杀进程
+	
+	/**
+	 * 监听初始化完成的监听器。用于网络初化完成后的监听
+	 * @author liuweihuan
+	 *
+	 */
+	public interface GlobalInitializationListener{
+		void initEnd();
+	}
+	
+	/**
+	 * 添加需要阻塞其它线程的任务的token
+	 */
+	private void addBlockTaskToken(String token){
+		blockTaskTokenSet.add(token);
+	}
+	
+	/**
+	 * 移除需要阻塞其它线程的任务的token
+	 * 移除后检查是否所有任务均已完成，完成就触发完成工作
+	 */
+	private void removeBlockTaskToken(String token){
+		blockTaskTokenSet.remove(token);
+		// 移除后检查
+		if(blockTaskTokenSet.size() < 1){
+			networkInitializationEnd();
+			initEndCallBack();
+		}
+	}
+	
+	public static GlobalInitialization getGlobalInitializationInstance(){
+		if (null == globalInitialization) {
+			globalInitialization = new GlobalInitialization();
+		}
+		globalInitialization.initMyActivity();
+		return globalInitialization;
+	}
+	
+	public void initMyActivity() {
+
+		// 初始化 myActivity
+		if (null == myActivity) {
+			if (Log.D) {
+				Log.d("Temp", "xxx myActivity -->> " + myActivity);
+			}
+			myActivity = MyApplication.getInstance().getCurrentMyActivity();
+
+			if (null != myActivity) {
+				httpGroupSetting.setMyActivity(myActivity);
+			}
+		}
+	}
+	
+	/**
+	 * 服务器配置加载完毕监听器
+	 * 
+	 * 每当服务器配置加载完毕后都会调用onLoaded()方法
+	 */
+	public interface ConfigLoadedListener{
+		void onLoaded();
+	}
+	
+	public void addConfigLoadedListener(ConfigLoadedListener listener){
+		configListenerList.add(listener);
+	}
+	public static void initNetwork(boolean wait) {
+
+		if (Log.D) {
+			Log.d("Temp", "GlobalInitialization initNetwork() -->> ");
+		}
+
+		getGlobalInitializationInstance().networkInitialization(wait);
+	}
+
+	/**
+	 * 此方法用于定期注册，给服务器反馈客户端还在线，此方法不能在initNetwork()之前调用，否则就很多东西没有初始化了。
+	 */
+	public static void regDevice() {
+		getGlobalInitializationInstance().registerDevice(false);
+	}
+
+	/**
+	 * 私有化构造函数
+	 */
+	private GlobalInitialization() {
+
+		// 初始化 httpGroup
+		if (null == httpGroup) {
+			httpGroupSetting = new HttpGroup.HttpGroupSetting();
+			httpGroupSetting.setType(HttpGroup.HttpGroupSetting.TYPE_JSON);
+			httpGroup = new HttpGroup.HttpGroupaAsynPool(httpGroupSetting);
+		}
+		
+	}
+
+	public synchronized void networkInitialization(boolean wait) {
+		networkInitialization(wait, false, null);
+	}
+	
+	
+	/**
+	 * 初始化网络控制
+	 * @param wait 如果是初始化中，线程将进入当前对象的等待队列
+	 * @param isOnlyFirst 仅仅注册第一次
+	 * @param listener 初始化工作监听器
+	 */
+	public synchronized void networkInitialization(boolean wait, boolean isOnlyFirst, GlobalInitializationListener listener) {
+
+		if (Log.D) {
+			Log.d("Temp", "GlobalInitialization networkInitialization() -->> ");
+		}
+		giListener = listener;
+
+		// 初始化 cpaProcessor
+		cpaProcessor = new CPAUtils.Processor(MyApplication.getInstance().getHandler(), httpGroup, this);
+
+		MyApplication myApplication = MyApplication.getInstance();
+
+		if (Log.D) {
+			Log.d("Temp", "GlobalInitialization myApplication.networkInitializationState -->> " + myApplication.networkInitializationState);
+		}
+		switch (myApplication.networkInitializationState) {
+		case 0:// 未曾初始化
+			networkInitializationStart(isOnlyFirst);
+			if (alreadyDevice && alreadyConfig) {
+				myApplication.networkInitializationState = 2;
+				break;
+			} else {
+				myApplication.networkInitializationState = 1;
+			}
+		case 1:// 正在初始化
+			if (wait) {
+				try {
+					if (Log.D) {
+						Log.d("Temp", "GlobalInitialization wait start -->> ");
+					}
+					wait();
+					if (Log.D) {
+						Log.d("Temp", "GlobalInitialization wait end -->> ");
+					}
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+			initEndCallBack();
+			break;
+		case 2:// 已经初始化
+			initEndCallBack();
+			break;
+		}
+
+	}
+	
+	/**
+	 * 初始化完成回调
+	 */
+	private void initEndCallBack() {
+		if (null != giListener) {
+			giListener.initEnd();
+			giListener = null;
+		}
+	}
+
+	/**
+	 * 初始化网络连接全都完成时
+	 */
+	private synchronized void networkInitializationEnd() {
+
+		if (Log.D) {
+			Log.d("Temp", "GlobalInitialization networkInitializationEnd() -->> ");
+		}
+
+		MyApplication myApplication = MyApplication.getInstance();
+
+		if (alreadyDevice && alreadyConfig) {
+			myApplication.networkInitializationState = 2;// 本次网络初始化完成了
+		} else {
+			myApplication.networkInitializationState = 0;// 还没有完成，还原状态为0:未初始化
+		}
+
+		if (Log.D) {
+			Log.d("Temp", "GlobalInitialization notifyAll -->> ");
+		}
+		notifyAll();
+
+	}
+
+	/**
+	 * 初始化网络连接时
+	 * @param isOnlyFirst 仅仅注册第一次
+	 */
+	private void networkInitializationStart(boolean isOnlyFirst) {
+
+		if (Log.D) {
+			Log.d("Temp", "GlobalInitialization networkInitializationStart() -->> ");
+		}
+
+		sharedPreferences = CommonUtil.getJdSharedPreferences();
+
+		alreadyDevice = sharedPreferences.getBoolean("registerDevice", false);
+		alreadyConfig = sharedPreferences.getBoolean("serverConfig", false);
+
+
+		if (!alreadyDevice) {
+			if (Log.D) {
+				Log.d("Temp", "not already device -->> ");
+			}
+			addBlockTaskToken(BLOCK_TASK_TOKEN_REGISTER_DEVICE);
+			registerDevice(true);// 设备注册
+		}
+
+		if (!alreadyConfig) {
+			if (Log.D) {
+				Log.d("Temp", "not already device -->> ");
+			}
+			addBlockTaskToken(BLOCK_TASK_TOKEN_SERVER_CONFIG);
+			serverConfig(true);// 下发配置
+		}
+		
+		if(alreadyDevice && alreadyConfig){
+			initEndCallBack();
+		}
+		
+		if (isOnlyFirst) {//仅第一次请求，不发送其它重复请求
+			return;
+		}
+
+		new Thread(new Runnable() {
+			public void run() {
+
+				// 延迟
+				// try {
+				// Thread.sleep(Configuration.getIntegerProperty(Configuration.ROUTINE_CHECK_DELAY_TIME));
+				// } catch (InterruptedException e) {
+				// e.printStackTrace();
+				// }
+
+				checksofteWareUpdated(true);// 版本检查
+
+				if (alreadyDevice) {
+					registerDevice(false);// 设备注册
+				}
+
+				if (alreadyConfig) {
+					serverConfig(false);// 下发配置
+				}
+
+			}
+		}).start();
+
+	}
+
+	/**
+	 * 下发配置
+	 */
+	private void serverConfig(final boolean isFirst) {
+
+		if (Log.D) {
+			Log.d("Temp", "GlobalInitialization serverConfig() -->> ");
+		}
+
+		OnAllListener onAllListener = new HttpGroup.CustomOnAllListener() {
+
+			@Override
+			public void onStart() {
+			}
+
+			@Override
+			public void onEnd(HttpResponse httpResponse) {
+
+				JSONObjectProxy config = httpResponse.getJSONObject().getJSONObjectOrNull("serverConfig");
+				if (null != config) {
+					Editor edit = sharedPreferences.edit();
+					for (Iterator<String> iterator = config.keys(); iterator.hasNext();) {
+						String name = iterator.next();
+						String value = config.getStringOrNull(name);
+						if (null == value) {
+							continue;
+						}
+						edit.putString(name, value);
+					}
+					edit.putBoolean("serverConfig", true);
+					edit.commit();
+										// 循环遍历注册监听
+					for (int i = 0; i < configListenerList.size(); i++) {
+						configListenerList.get(i).onLoaded();
+					}
+				}
+				alreadyConfig = true;
+				removeBlockTaskToken(BLOCK_TASK_TOKEN_SERVER_CONFIG);
+
+			}
+
+			@Override
+			public void onError(HttpError error) {
+				removeBlockTaskToken(BLOCK_TASK_TOKEN_SERVER_CONFIG);
+			}
+
+			@Override
+			public void onProgress(int max, int progress) {
+			}
+
+		};
+
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setFunctionId("serverConfig");
+		httpSetting.setListener(onAllListener);
+		httpSetting.setNotifyUser(isFirst ? true : false);
+		// httpSetting.setNotifyUserWithExit(isFirst ? true : false);// 无网络进入客户端，不出现退出按钮
+		httpSetting.setNeedGlobalInitialization(false);
+		httpSetting.setTopPriority(true);
+
+		httpGroup.add(httpSetting);
+	}
+
+	/**
+	 * 设备注册
+	 */
+	public void registerDevice(final boolean isFirst) {
+
+		if(isFirst && cpaProcessor.beforeRegisterDevice()){
+			return;
+		}
+
+		if (Log.D) {
+			Log.d("Temp", "GlobalInitialization registerDevice() -->> ");
+		}
+
+		JSONObject params = null;
+		try {
+//			// TODO 这种解决方式不好
+//			if (null == MyApplication.getInstance().getMainActivity()) {
+//				return;
+//			}
+			params = new JSONObject(StatisticsReportUtil.getDeviceInfoStr());
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+		OnAllListener onAllListener = new HttpGroup.CustomOnAllListener() {
+
+			@Override
+			public void onStart() {
+			}
+
+			@Override
+			public void onEnd(HttpResponse httpResponse) {
+				sharedPreferences.edit().putBoolean("registerDevice", true).commit();
+				alreadyDevice = true;
+				removeBlockTaskToken(BLOCK_TASK_TOKEN_REGISTER_DEVICE);
+			}
+
+			@Override
+			public void onError(HttpError error) {
+				removeBlockTaskToken(BLOCK_TASK_TOKEN_REGISTER_DEVICE);
+			}
+
+			@Override
+			public void onProgress(int max, int progress) {
+			}
+
+		};
+
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setJsonParams(params);
+		httpSetting.setFunctionId("device");
+		httpSetting.setListener(onAllListener);
+		httpSetting.setNotifyUser(isFirst ? true : false);
+		// httpSetting.setNotifyUserWithExit(isFirst ? true : false);// 无网络进入客户端，不出现退出按钮
+		httpSetting.setNeedGlobalInitialization(false);
+		httpSetting.setTopPriority(true);
+		
+		httpGroup.add(httpSetting);
+	}
+	
+	/**
+	 * 手动触发版本更新，</br>此方法不能在initNetwork()之前调用，否则就很多东西没有初始化了。
+	 */
+	public static void checkVersion() {
+		getGlobalInitializationInstance().checksofteWareUpdated(false);
+	}
+
+	/**
+	 * 应用更新
+	 */
+	private void checksofteWareUpdated(final boolean isAuto) {
+
+		if (Log.D) {
+			Log.d("Temp", "GlobalInitialization checksofteWareUpdated() -->> ");
+		}
+
+		// 景作需求：升级开关只对自动更新有效果，手动升级失效。
+		// 修改：刘卫欢 2012妇女节
+		if (!Configuration.getBooleanProperty(Configuration.APPLICATION_UPGRADE) && isAuto) {
+			return;
+		}
+
+		OnAllListener onAllListener = new HttpGroup.OnAllListener() {
+
+			@Override
+			public void onProgress(int max, int progress) {
+			}
+
+			@Override
+			public void onError(HttpError error) {
+				// 版本检查失败不用做处理
+			}
+
+			@Override
+			public void onEnd(HttpResponse httpResponse) {
+
+				JSONObjectProxy jsonObject = httpResponse.getJSONObject();
+
+				// 描述
+				String description = jsonObject.getStringOrNull("changes");
+				// 最新版本
+				String remoteVersion = jsonObject.getStringOrNull("version");
+				// remoteVersion = "3.0.0";
+				// 下载地址
+				String downloadUrl = jsonObject.getStringOrNull("url");
+				// 升级类型 upgrade :300 不升级，301 升级，302 强制升级
+				String upgradeCode = jsonObject.getStringOrNull("upgrade");
+
+				if (Log.D) {
+					Log.d("Temp", "checksofteWareUpdated() remoteVersion -->> " + remoteVersion);
+				}
+				if (Log.D) {
+					Log.d("Temp", "checksofteWareUpdated() downloadUrl -->> " + downloadUrl);
+				}
+				if (Log.D) {
+					Log.d("Temp", "checksofteWareUpdated() upgradeCode -->> " + upgradeCode);
+				}
+
+				// 尝试升级
+				// 1. 获得当前页面，为了在当前页面弹出对话框等相关操作。
+				MyActivity myActivity = null;
+				MainActivity mainActivity = MyApplication.getInstance().getMainActivity();
+				if (null != mainActivity) {
+					Activity activity = mainActivity.getCurrentActivity();
+					if (activity instanceof MyActivity) {
+						myActivity = (MyActivity) activity;
+					}
+				}
+				// 2. 尝试升级
+				if (null != myActivity) {
+					ApplicationUpgradeHelper.tryUpgrade(myActivity, remoteVersion, upgradeCode, downloadUrl, description, isAuto);
+				}
+
+			}
+
+			@Override
+			public void onStart() {
+			}
+
+		};
+
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setFunctionId("version");
+		httpSetting.putJsonParam("osVersion", android.os.Build.VERSION.SDK);
+		httpSetting.putJsonParam("platform", Constants.PLATFORM);
+		httpSetting.setListener(onAllListener);
+		httpSetting.setNotifyUser(true);
+		httpSetting.setNeedGlobalInitialization(false);
+		if (!isAuto) {// 手动的更新
+			httpSetting.setEffect(HttpSetting.EFFECT_STATE_YES);
+			MyApplication.getInstance().getCurrentMyActivity().getHttpGroupaAsynPool().add(httpSetting);
+			return;
+		}
+
+		httpGroup.add(httpSetting);
+
+	}
+
+	/**
+	 * 首次调用必须正确与服务器通讯，否则退出应用
+	 */
+	public void exit() {
+		// 首次调用必须正确与服务器通讯，否则退出应用
+		myActivity.post(new Runnable() {
+			public void run() {
+				Toast.makeText(MyApplication.getInstance(), "服务器繁忙，请稍后重试。", Toast.LENGTH_LONG).show();
+			}
+		});
+		myActivity.post(new Runnable() {
+			public void run() {
+				MyApplication.exitAll();
+			}
+		}, 2000);
+	}
+
+}

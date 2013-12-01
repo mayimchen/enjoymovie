@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <!-- 界面Title -->
+
+    <include
+        android:id="@+id/common_title"
+        layout="@layout/head" />
+
+    <ScrollView
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:layout_below="@id/common_title" >
+
+        <LinearLayout
+            android:id="@+id/order_info_content"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="visible" >
+
+            <!-- 订单状态 -->
+
+            <LinearLayout
+                android:id="@+id/order_detail_status_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="7dp"
+                android:layout_marginLeft="14dp"
+                android:layout_marginRight="14dp"
+                android:layout_marginTop="14dp" >
+
+                <!-- 订单状态列表 -->
+
+                <include
+                    android:id="@+id/order_detail_status_layout_comm"
+                    layout="@layout/order_status_layout" />
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/order_baseInfo_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="7dp"
+                android:layout_marginLeft="14dp"
+                android:layout_marginRight="14dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/order_item_bg"
+                android:orientation="vertical" >
+
+                
+
+                <include
+                    android:id="@+id/order_detail_status_layout_comm"
+                    layout="@layout/order_base_info"
+                     />
+                <!-- layout="@layout/order_money_layout" -->
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/order_contact_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="7dp"
+                android:layout_marginLeft="14dp"
+                android:layout_marginRight="14dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/order_item_bg"
+                android:orientation="vertical" >
+
+                <!-- 支付信息 -->
+
+                <include
+                    android:id="@+id/order_detail_status_layout_comm"
+                    layout="@layout/order_contact_layout" 
+                     />
+                <!-- layout="@layout/ layout="@layout/order_base_info"" -->
+            </LinearLayout>
+            <!-- 支付信息 -->
+            <LinearLayout
+                android:id="@+id/info"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="7dp"
+                android:layout_marginLeft="14dp"
+                android:layout_marginRight="14dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/order_item_bg"
+                android:orientation="vertical" >
+
+                <!-- 支付信息 -->
+
+                <include
+                    android:id="@+id/order_detail_status_layout_comm"
+                    layout="@layout/order_pay_layout" />
+            </LinearLayout>
+            
+
+            <!-- 商品列表 -->
+
+            <LinearLayout
+                android:id="@+id/product_of_order"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="7dp"
+                android:layout_marginLeft="14dp"
+                android:layout_marginRight="14dp"
+                android:background="@drawable/order_item_bg"
+                android:layout_marginTop="7dp"
+                 >
+                
+                <com.banking.xc.utils.ui.MyListView
+                    android:id="@+id/order_product_list"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentTop="true"
+                    android:divider="#CCCCCC"
+                    android:dividerHeight="1dp"
+                    android:footerDividersEnabled="false"
+                    android:minHeight="200dp"
+                    android:scrollbars="none" >
+                </com.banking.xc.utils.ui.MyListView>
+                <!--  android:background="@drawable/android_my_order_item_bg" -->
+            </LinearLayout>
+            <!-- 收货人信息 -->
+
+            <LinearLayout
+                android:id="@+id/info2"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="7dp"
+                android:layout_marginLeft="14dp"
+                android:layout_marginRight="14dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/order_item_bg"
+                android:orientation="vertical" >
+
+                <!-- 收货人信息 -->
+
+                <include
+                    android:id="@+id/order_consignee_number_layout"
+                    layout="@layout/order_contact_layout" />
+            </LinearLayout>
+
+
+   
+            <!-- 配送方式 -->
+
+            <LinearLayout
+                android:id="@+id/info4"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="7dp"
+                android:layout_marginLeft="14dp"
+                android:layout_marginRight="14dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/order_item_bg"
+                android:orientation="vertical" >
+
+                <!-- 配送方式 -->
+
+                <include
+                    android:id="@+id/order_detail_status_layout_comm"
+                    layout="@layout/order_contact_layout" />
+            </LinearLayout>
+
+            <!-- 发票信息 -->
+
+            <LinearLayout
+                android:id="@+id/info5"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="7dp"
+                android:layout_marginLeft="14dp"
+                android:layout_marginRight="14dp"
+                android:layout_marginTop="7dp"
+                android:background="@drawable/order_item_bg"
+                android:orientation="vertical" >
+
+                <!-- 发票信息 -->
+
+                <include
+                    android:id="@+id/order_detail_status_layout_comm"
+                    layout="@layout/order_contact_layout" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+</RelativeLayout>

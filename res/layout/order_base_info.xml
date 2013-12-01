@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <!-- 订单状态 -->
+
+    <TextView
+        android:id="@+id/hotel_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="10dp"
+        android:paddingBottom="10dp"
+        android:paddingTop="10dp"
+        android:textColor="@color/black"
+        android:text="联系人：张三"
+        android:textSize="16dp" >
+    </TextView>
+
+    <!-- 订单状态内容 -->
+
+    <TextView
+        android:id="@+id/hotel_address"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/title_id"
+        android:layout_alignParentRight="true"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="10dp"
+        android:paddingBottom="10dp"
+        android:paddingTop="10dp"
+        android:textColor="@color/black"
+        android:text="上海"
+        android:textSize="16dp" >
+    </TextView>
+
+    <View
+        android:id="@+id/line_parting"
+        style="@style/line1"
+        android:layout_below="@+id/hotel_name"
+        android:saveEnabled="false" />
+
+    <!-- 订单编号 -->
+
+    <TextView
+        android:id="@+id/room_name"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/line_parting"
+        android:layout_marginLeft="10dp"
+        android:paddingBottom="10dp"
+        android:paddingTop="10dp"
+        android:textColor="@color/gray"
+        android:text="其他信息"
+        android:textSize="12dp" >
+    </TextView>
+     <View
+        android:id="@+id/line_parting2"
+        style="@style/line1"
+        android:layout_below="@+id/room_name"
+        android:saveEnabled="false" />
+
+    <!-- 订单编号 -->
+
+    <TextView
+        android:id="@+id/room_detail"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/line_parting2"
+        android:layout_marginLeft="10dp"
+        android:paddingBottom="10dp"
+        android:paddingTop="10dp"
+        android:textColor="@color/gray"
+        android:text="房间客人详情"
+        android:textSize="12dp" >
+    </TextView>
+</RelativeLayout>

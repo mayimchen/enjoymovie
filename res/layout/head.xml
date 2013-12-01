@@ -1,0 +1,46 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="45dp"
+    >
+    
+    <ImageView 
+        android:id="@+id/titleBg"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:background="@drawable/tmall_bar_segmentation"
+        />
+    <!-- android_title_bg,tmall_bar_segmentation-->
+     <ImageView 
+        android:id="@+id/progressImage"
+        android:layout_width="0dp"
+        android:layout_height="fill_parent"
+        android:background="@drawable/android_title_bg_progress"
+        android:visibility="gone"
+        />
+    
+    <Button
+        android:id="@+id/titleRightButton"
+        android:layout_width="72dp"
+        android:layout_height="34dp"
+        android:layout_gravity="center_vertical"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="5dp"
+        android:layout_marginTop="2dp"
+        android:layout_centerVertical="true"
+        style="@style/title_right_button"
+        android:visibility="gone">
+    </Button>
+
+    <TextView
+        android:id="@+id/titleText"
+        style="@style/layout_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_gravity="center_vertical"
+        android:layout_alignParentLeft="true"
+        android:padding="10dp"
+        android:singleLine="true" >
+
+    </TextView>
+</RelativeLayout>

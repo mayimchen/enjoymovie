@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="171dp"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <include
+        android:id="@+id/movie_item1"
+        layout="@layout/movie_home_item" />
+
+    <View
+        android:layout_width="fill_parent"
+        android:layout_height="6dp" />
+
+    <include
+        android:id="@+id/movie_item2"
+        layout="@layout/movie_home_item" />
+
+    <View
+        android:layout_width="fill_parent"
+        android:layout_height="6dp" />
+
+    <include
+        android:id="@+id/movie_item3"
+        layout="@layout/movie_home_item" />
+
+</LinearLayout>

@@ -1,0 +1,304 @@
+package com.banking.xc.utils;
+
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
+import android.text.TextUtils;
+import android.view.KeyEvent;
+import android.view.View;
+import skytv_com.banking.enjoymovie.R;
+import skytv_com.banking.enjoymovie.MyApplication;
+
+import com.banking.xc.utils.FileService.Directory;
+import com.banking.xc.utils.HttpGroup.HttpError;
+import com.banking.xc.utils.HttpGroup.HttpGroupSetting;
+import com.banking.xc.utils.HttpGroup.HttpRequest;
+import com.banking.xc.utils.HttpGroup.HttpResponse;
+import com.banking.xc.utils.HttpGroup.HttpSetting;
+
+public class ApplicationUpgradeHelper {
+
+	private static final String UPGRADE_CODE_NEED = "301";
+
+	private static final String UPGRADE_CODE_MUST = "302";
+
+	private static final String UPGRADE_CODE_NO = "300";
+
+	public final static int INSTALL_REQUEST_CODE = 1001;
+
+	private static MyActivity mMyActivity;
+
+	private final static int MUST_UPDATE = 1;// 必须升级
+	private final static int NEED_UPDATE = 2;// 需要升级
+	private final static int NO_UPDATE = 0;// 不需要升级
+	private static int upgradeState;
+
+	private static String mRemoteVersion;
+	private static String mDownloadUrl;
+
+	private static HttpRequest httpRequest;
+
+	private static boolean isCancel = false;
+
+	private static AlertDialog.Builder alertDialogBuilder;
+	private static AlertDialog alertDialog;
+	private static DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
+		@Override
+		public void onClick(DialogInterface dialog, int which) {
+			switch (which) {
+			case DialogInterface.BUTTON_POSITIVE:// 左按钮点击事件
+				if (Log.D) {
+					Log.d("Temp", "onClick() BUTTON_POSITIVE -->> ");
+				}
+				download(mMyActivity.getHttpGroupaAsynPool());
+				alertDialog.getButton(which).setVisibility(View.GONE);// 让确定按钮消失
+				updateUI();
+				return;
+			case DialogInterface.BUTTON_NEGATIVE:// 中按钮点击事件
+				if (Log.D) {
+					Log.d("Temp", "onClick() BUTTON_NEGATIVE -->> ");
+				}
+				if (upgradeState == MUST_UPDATE) {
+					if (null != httpRequest) {
+						httpRequest.stop();
+					}
+					MyApplication.exitAll();
+				} else {
+					isCancel = true;
+					if (null != httpRequest) {
+						httpRequest.stop();
+					}
+				}
+				// TODO 需要更新时用户点击取消，应该取消正在下载的线程工作。
+				// TODO 只是下完不管
+
+				return;
+			}
+		}
+	};
+
+	/**
+	 * 尝试升级
+	 */
+	public static void tryUpgrade(MyActivity myActivity, String remoteVersion, String upgradeCode, String downloadUrl, final String description, boolean isAuto) {
+
+		if (Log.D) {
+			Log.d("Temp", "tryUpgrade() -->> ");
+		}
+
+		mMyActivity = myActivity;
+		mRemoteVersion = remoteVersion;
+		mDownloadUrl = downloadUrl;
+		
+		isCancel = false;
+
+		// 升级对话框
+		alertDialogBuilder = new AlertDialog.Builder(mMyActivity);
+		alertDialogBuilder.setPositiveButton(R.string.ok, clickListener);
+		alertDialogBuilder.setNegativeButton(R.string.cancel, clickListener);
+
+		// 禁止后退
+		alertDialogBuilder.setOnKeyListener(new DialogInterface.OnKeyListener() {
+			@Override
+			public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+				return true;
+			}
+		});
+
+		// 判断是否需要更新
+		upgradeState = compareSoftwareUpdate(upgradeCode);
+
+		// 按需弹窗
+		switch (upgradeState) {
+		case MUST_UPDATE:// 必须升级
+			mMyActivity.post(new Runnable() {
+				@Override
+				public void run() {
+					String text = "";
+					alertDialogBuilder.setMessage(text + "\n\n升级改动：\n" + description);
+					alertDialog = alertDialogBuilder.show();
+				}
+			});
+			return;
+		case NEED_UPDATE:// 需要升级
+			mMyActivity.post(new Runnable() {
+				@Override
+				public void run() {
+					String text = "";
+					alertDialogBuilder.setMessage(text + "\n\n升级改动：\n" + description);
+					alertDialog = alertDialogBuilder.show();
+				}
+			});
+			return;
+		case NO_UPDATE:
+			if(!isAuto){//非自动化更新，需要弹出提示给用户
+				mMyActivity.post(new Runnable() {
+					@Override
+					public void run() {
+						 AlertDialog.Builder noUpdateAlert = new AlertDialog.Builder(mMyActivity);
+						 noUpdateAlert.setPositiveButton(R.string.ok, null);
+						 noUpdateAlert.setTitle(R.string.prompt);
+						 noUpdateAlert.setMessage("");
+						 noUpdateAlert.show();
+					}
+				});
+			}
+			break;
+		}
+	}
+
+	/**
+	 * 判断是否必须升级
+	 */
+	public static int compareSoftwareUpdate(String upgradeCode) {
+
+		int rtnCode = NO_UPDATE;
+
+		if (TextUtils.equals(upgradeCode, UPGRADE_CODE_NO)) {
+			// 不升级
+			rtnCode = NO_UPDATE;
+		} else if (TextUtils.equals(upgradeCode, UPGRADE_CODE_MUST)) {
+			// 强制升级
+			rtnCode = MUST_UPDATE;
+		} else if (TextUtils.equals(upgradeCode, UPGRADE_CODE_NEED)) {
+			// 提示升级
+			rtnCode = NEED_UPDATE;
+		}
+		return rtnCode;
+	}
+
+	/**
+	 * 更新弹出窗口的进度
+	 */
+	private static void updateUI() {
+		mMyActivity.post(new Runnable() {
+			@Override
+			public void run() {
+				if (!alertDialog.isShowing()) {
+					alertDialog.show();
+				}
+				alertDialog.setMessage("下载中，请稍候...");
+			}
+		});
+	}
+
+	/**
+	 * 下载监听
+	 */
+	private static HttpGroup.OnAllListener downloadListener = new HttpGroup.OnAllListener() {
+
+		@Override
+		public void onProgress(final int max, final int progress) {// 进度 - - - - - - - - - -
+			if (Log.D) {
+				Log.d("Temp", "application upgrade onProgress() max -->> " + max);
+			}
+			if (Log.D) {
+				Log.d("Temp", "application upgrade onProgress() progress -->> " + progress);
+			}
+			int calculate = progress * 100 / max;
+			if (calculate > 99) {// 百分比最大显示99%，比较友好
+				calculate = 99;
+			}
+			final int percent = calculate;
+			final String size = FileService.formatSize2(progress);
+			mMyActivity.post(new Runnable() {
+				@Override
+				public void run() {
+					if (isCancel) {
+						return;
+					}
+					if (!alertDialog.isShowing()) {
+						alertDialog.show();
+					}
+					if (Log.D) {
+						Log.d("Temp", "application upgrade onProgress() UI percent -->> " + percent);
+					}
+					if (max <= 0) {// 没有总大小，只显示百分比
+						alertDialog.setMessage("下载中，请稍候...\n已下载：" + size);
+					} else {// 否则显示百分比和字节大小
+						alertDialog.setMessage("下载中，请稍候...\n已下载：" + percent + "%，" + size);
+					}
+				}
+			});
+		}
+
+		@Override
+		public void onError(HttpError error) {// 失败 - - - - - - - - - -
+			if (Log.D) {
+				Log.d("Temp", "onError()");
+			}
+			mMyActivity.post(new Runnable() {
+				@Override
+				public void run() {
+					alertDialog.setMessage("下载出错。请取消后重新尝试。");
+				}
+			});
+		}
+
+		@Override
+		public void onEnd(HttpResponse httpResponse) {// 成功 - - - - - - - - - -
+			if (isCancel) {
+				return;
+			}
+			if (Log.D) {
+				Log.d("Temp", "onEnd()");
+			}
+			String apkFilePath = httpResponse.getSaveFile().getAbsolutePath();
+			if (Log.D) {
+				Log.d("Temp", "onEnd() apkFilePath -->> " + apkFilePath);
+			}
+			install(apkFilePath);
+			if (alertDialog.isShowing()) {
+				alertDialog.dismiss();
+			}
+		}
+
+		@Override
+		public void onStart() {// 开始 - - - - - - - - - -
+		}
+
+	};
+
+	/**
+	 * 安装
+	 */
+	private static void install(String apkFilePath) {
+		if (Log.D) {
+			Log.d("Temp", "install() -->> ");
+		}
+		Intent intent = new Intent(Intent.ACTION_VIEW);
+		intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		intent.setDataAndType(Uri.parse("file://" + apkFilePath), "application/vnd.android.package-archive");
+		if (Log.D) {
+			Log.d("Temp", "install() upgradeState -->> " + upgradeState);
+		}
+		if (upgradeState == MUST_UPDATE) {// 必须升级时，要防止用户在升级过程中进行取消操作。
+			//mMyActivity.startActivityForResultNoException(intent, INSTALL_REQUEST_CODE);
+		} else {
+			//mMyActivity.startActivityNoException(intent);
+		}
+	}
+
+	/**
+	 * 下载
+	 */
+	private static void download(HttpGroup httpGroup) {
+
+		if (Log.D) {
+			Log.d("Temp", "download() -->> ");
+		}
+
+		// 保存路径
+		FileGuider savePath = new FileGuider();
+		savePath.setSpace(Directory.INTERNAL);
+		savePath.setImmutable(true);
+		savePath.setFileName("jingdong_" + mRemoteVersion + ".apk");
+		savePath.setMode(Context.MODE_WORLD_READABLE);
+
+		
+
+	}
+
+}

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="2dp"
+    android:orientation="vertical" >
+    
+    <TextView 
+        android:id="@+id/vacation_segment_number"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:text="行程1:"
+        />
+    <!--  -->
+    <TextView
+        android:id="@+id/vacation_segment_city_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:singleLine="true"
+        android:ellipsize="middle"
+        android:layout_toRightOf="@id/vacation_segment_number"
+        />
+  <!--   <TextView 
+        android:id="@+id/vacation_segment_date_tv"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_toRightOf="@id/vacation_segment_city_tv"/> -->
+    <ImageView
+        android:id="@+id/segment_item_iv"
+        android:layout_height="100dp"
+        android:layout_width="130dp"
+        android:layout_below="@id/vacation_segment_number" 
+        android:scaleType="centerInside"
+        android:background="@drawable/background_corners"
+        />
+
+    <RelativeLayout
+        android:id="@+id/segment_item_layout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="100dp"
+        android:layout_marginLeft="2dp"
+        android:layout_below="@id/vacation_segment_number" 
+        android:layout_toRightOf="@id/segment_item_iv" >
+
+        <TextView
+            android:id="@+id/vacation_item_iv"
+            android:layout_height="18dp" 
+            android:layout_width="18dp"
+            android:layout_marginTop="2dp"
+            />
+        <TextView
+            android:id="@+id/vacation_item_content"
+            android:layout_height="wrap_content"
+            android:layout_width="fill_parent"
+            android:layout_alignTop="@id/vacation_item_iv"
+            android:layout_toRightOf="@id/vacation_item_iv"
+            />
+        <RelativeLayout 
+            android:id="@+id/edit_vacation_item_layout"
+            android:layout_below="@id/vacation_item_content"
+            android:layout_height="28dp"
+            android:layout_width="fill_parent"
+            >
+            <TextView 
+                android:id="@+id/edit_vacation_item"
+                android:layout_height="20dp"
+                android:layout_width="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:textSize="16.5sp"
+                />
+            <TextView
+                android:id="@+id/del_vacation_item"
+                android:layout_height="20dp"
+                android:layout_width="wrap_content"
+                android:layout_toRightOf="@id/edit_vacation_item"
+                android:layout_marginLeft="15dp"
+                android:textSize="16.5sp"
+                />
+        </RelativeLayout>
+        <TextView
+            android:id="@+id/vacation_item_price"
+            android:layout_height="wrap_content"
+            android:layout_width="wrap_content"
+            android:layout_below="@id/edit_vacation_item_layout"
+            />
+    </RelativeLayout>
+    <TextView 
+        android:id="@+id/segment_item_detail_tv"
+        android:layout_height="wrap_content"
+        android:layout_width="fill_parent"
+        android:minLines="1"
+        android:maxLines="3"
+        android:ellipsize="middle"
+        android:layout_marginBottom="10dp"
+        android:layout_below="@id/segment_item_layout"/>
+</RelativeLayout>

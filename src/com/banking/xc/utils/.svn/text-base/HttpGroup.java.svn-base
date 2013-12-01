@@ -1,0 +1,3561 @@
+package com.jingdong.app.mall.utils;
+
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.lang.ref.SoftReference;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.zip.GZIPInputStream;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Bundle;
+import android.text.TextUtils;
+import android.view.KeyEvent;
+
+import com.jingdong.app.mall.MainActivity;
+import com.jingdong.app.mall.MyApplication;
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.config.CacheTimeConfig;
+import com.jingdong.app.mall.config.Configuration;
+import com.jingdong.app.mall.database.table.CacheFileTable;
+import com.jingdong.app.mall.database.table.UnExcuteFunctionTable;
+import com.jingdong.app.mall.entity.CacheFile;
+import com.jingdong.app.mall.entity.UnExcuteFunction;
+import com.jingdong.app.mall.login.LoginUser;
+import com.jingdong.app.mall.login.SafetyManager;
+import com.jingdong.app.mall.secure.DesUtil;
+import com.jingdong.app.mall.secure.SecureAPI;
+import com.jingdong.app.mall.secure.SecureNetwork;
+import com.jingdong.app.mall.utils.FileService.Directory;
+import com.jingdong.app.mall.utils.MyActivity.DestroyListener;
+import com.jingdong.app.mall.utils.NetUtils.NetType;
+import com.jingdong.app.mall.utils.thread.PooledThread;
+import com.jingdong.app.mall.utils.ui.DialogController;
+
+public abstract class HttpGroup implements DestroyListener {
+
+	private static int test = 0;
+
+	private static int httpIdCounter = 0;
+
+	private static String cookies;
+
+	private static String mMd5Key;// 密钥
+	private static JSONObjectProxy mModules;// 模块
+
+	public static void setMd5Key(String md5Key) {
+		mMd5Key = md5Key;
+	}
+
+	public static void setModules(JSONObjectProxy jsonObject) {
+		mModules = jsonObject;
+	}
+
+	/**
+	 * 获取密钥
+	 */
+	public static void queryMd5Key(CompleteListener listener) {
+		HttpGroupSetting setting = new HttpGroupSetting();
+		setting.setPriority(HttpGroupSetting.PRIORITY_JSON);
+		setting.setType(HttpGroupSetting.TYPE_JSON);
+		HttpGroup httpGroup = new HttpGroup.HttpGroupaAsynPool(setting);
+		queryMd5Key(httpGroup, listener);
+	}
+
+	/**
+	 * 获取密钥
+	 */
+	public static void queryMd5Key(HttpGroup httpGroup, final CompleteListener listener) {
+		OnAllListener onAllListener = new HttpGroup.OnAllListener() {
+
+			@Override
+			public void onStart() {
+			}
+
+			@Override
+			public void onEnd(HttpResponse httpResponse) {
+				try {
+					String md5KeyCode = httpResponse.getJSONObject().getStringOrNull("key");
+					if (null == md5KeyCode) {
+						return;
+					}
+					byte[] md5KeyBytes = Base64.decode(md5KeyCode);
+
+					for (int i = 0, byteLength = md5KeyBytes.length; i < byteLength; i++) {
+						md5KeyBytes[i] = (byte) ~md5KeyBytes[i];
+					}
+					String md5Key = new String(md5KeyBytes);
+					if (Log.D) {
+						Log.d("HttpGroup", "md5Key -->> " + md5Key);
+					}
+					HttpGroup.setMd5Key(md5Key);
+					// 通知
+					if (null != listener) {
+						listener.onComplete(null);
+					}
+				} catch (Exception e) {
+					// 通知
+					if (null != listener) {
+						listener.onComplete(null);
+					}
+				}
+			}
+
+			@Override
+			public void onError(HttpError error) {
+				// 通知
+				if (null != listener) {
+					listener.onComplete(null);
+				}
+			}
+
+			@Override
+			public void onProgress(int max, int progress) {
+			}
+
+		};
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setFunctionId("key");
+		httpSetting.setJsonParams(new JSONObject());
+		httpSetting.setListener(onAllListener);
+		httpSetting.setPost(true);
+		httpGroup.add(httpSetting);
+	}
+
+	public interface CompleteListener {
+		void onComplete(Bundle bundle);
+	}
+
+	private boolean useCaches = false;// 缓存
+	private static final int connectTimeout = Integer.parseInt(Configuration.getProperty(Configuration.CONNECT_TIMEOUT));// 连接超时
+	private static final int connectTimeoutForWIFI = Integer.parseInt(Configuration.getProperty(Configuration.CONNECT_TIMEOUT_FOR_WIFI));// 连接超时
+	private static final int readTimeout = Integer.parseInt(Configuration.getProperty(Configuration.READ_TIMEOUT));// 读取超时
+	private static final int readTimeoutForWIFI = Integer.parseInt(Configuration.getProperty(Configuration.READ_TIMEOUT_FOR_WIFI));// 读取超时
+	private static String charset = "UTF-8";// 编码
+
+	private static final int attempts = Integer.parseInt(Configuration.getProperty(Configuration.ATTEMPTS));// 尝试次数
+	private static final int attemptsTime = Integer.parseInt(Configuration.getProperty(Configuration.ATTEMPTS_TIME));// 尝试的间隔时间
+
+	//private static final String host = Configuration.getProperty(Configuration.HOST);
+
+	// protected Vector<HttpRequest> httpList = new Vector<HttpRequest>();// 组的任务数量 ，该集合造成了内存泄露
+	protected int httpCount = 0;// 组的任务数量
+	protected HttpGroupSetting httpGroupSetting;
+	protected int priority;
+	protected int type;
+	private boolean reportUserInfoFlag = true;// add by zhangjp 2011.2.13
+	private boolean needImageCorner = true; // 是否需要图片圆角
+	private int imageCornerDp = 0; // 圆角的dp值
+
+	// 设置是否带上client的访问信息
+
+	private static final HashMap<MyActivity, ArrayList<HttpRequest>> alertDialogStateMap = new HashMap<MyActivity, ArrayList<HttpRequest>>();
+
+	public HttpGroup(HttpGroupSetting setting) {
+		this.httpGroupSetting = setting;
+		this.priority = setting.getPriority();
+		this.type = setting.getType();
+	}
+
+	abstract protected void execute(HttpRequest httpRequest);
+
+	public HttpRequest add(String functionId, JSONObject params, OnAllListener listener) {// JSON 方式
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setFunctionId(functionId);
+		httpSetting.setJsonParams(params);
+		httpSetting.setListener(listener);
+		
+		return add(httpSetting);
+	}
+
+	public HttpRequest add(String url, Map<String, String> paramMap, OnAllListener listener) {// param 方式
+
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setUrl(url);
+		// TODO
+		// 此处可能会放入没有经过URL编码的参数，如果需要可以在此处配合httpSetting.putMapParams()方法遍历一次进行处理。
+		httpSetting.setMapParams(paramMap);
+		httpSetting.setListener(listener);
+
+		return add(httpSetting);
+	}
+
+	/**
+	 * 每次提供的httpSetting都应该是新的，不要同一个httpSetting多次提供给网络层
+	 */
+	public HttpRequest add(final HttpSetting httpSetting) {
+
+		// 给每个网络请求派发一个运行时标识符
+		httpIdCounter = httpIdCounter + 1;
+		httpSetting.setId(httpIdCounter);
+
+		tryEffect(httpSetting);
+
+		final HttpRequest httpRequest = new HttpRequest(httpSetting);
+
+		final OnReadyListener onReadyListener = httpSetting.getOnReadyListener();
+		if (null != onReadyListener) {
+			new Thread() {
+				@Override
+				public void run() {
+					onReadyListener.onReady(httpSetting);
+
+					if (httpSetting.isReady()) {
+						add2(httpRequest);// 准备好参数才继续
+
+					} else {// 否则没有准备好，抛出一个error，给调用者
+						final HttpError httpError = new HttpError(new Exception(HttpError.EXCEPTION_MESSAGE_NO_READY));
+						httpSetting.onError(httpError);
+
+					}
+				}
+			}.start();
+		} else {
+			add2(httpRequest);// 直接继续
+		}
+
+		return httpRequest;
+
+	}
+
+	public void add2(HttpRequest httpRequest) {
+
+		HttpSetting httpSetting = httpRequest.getHttpSetting();
+
+		if (Log.I && null != httpSetting.getFunctionId()) {
+			Log.i("HttpGroup", "id:" + httpSetting.getId() + "- functionId -->> " + httpSetting.getFunctionId());
+		}
+
+		if (Log.I && null != httpSetting.getUrl()) {
+			Log.i("HttpGroup", "id:" + httpSetting.getId() + "- url -->> " + httpSetting.getUrl());
+		}
+
+		String host = Configuration.getProperty(Configuration.HOST);
+		// host（因为需要为以下的url提供host，所以在此设置）
+		if (null == httpSetting.getHost()) {
+			httpSetting.setHost(host);
+		}
+
+		// 数据类型（因为优先级提前，因此数据类型也要提前）
+		if (httpSetting.getType() == 0) {
+			httpSetting.setType(type);
+		}
+
+		// 优先级（一定要提前到这里处理，因为要赶在加入线程池之前）
+		if (httpSetting.getPriority() == 0) {
+			httpSetting.setPriority(priority);
+		}
+
+		// 默认优先级
+		if (httpSetting.getPriority() == 0) {// 可继承
+			switch (httpSetting.getType()) {
+			case HttpGroupSetting.TYPE_JSON:// 如果是 JSON
+				httpSetting.setPriority(HttpGroupSetting.PRIORITY_JSON);
+				break;
+			case HttpGroupSetting.TYPE_IMAGE:// 如果是图片
+				httpSetting.setPriority(HttpGroupSetting.PRIORITY_IMAGE);
+				break;
+			case HttpGroupSetting.TYPE_FILE:// 如果是文件
+				httpSetting.setPriority(HttpGroupSetting.PRIORITY_FILE);
+				break;
+			}
+		}
+
+		execute(httpRequest);// 马上交给线程处理。在此之前还是UI线程。
+
+	}
+
+	/**
+	 * 如果要求默认效果，而且效果状态为未处理，并且所关联 activity 非空，才加上效果。
+	 */
+	private void tryEffect(HttpSetting httpSetting) {
+		MyActivity myActivity = httpGroupSetting.getMyActivity();
+		if (HttpSetting.EFFECT_DEFAULT == httpSetting.getEffect() && // 需要默认效果
+				HttpSetting.EFFECT_STATE_NO == httpSetting.getEffectState() && // 而且效果状态为未处理
+				null != myActivity) {// 并且所关联 activity 非空
+			DefaultEffectHttpListener effectListener = new DefaultEffectHttpListener(httpSetting, myActivity);
+			httpSetting.setListener(effectListener);
+		}
+	}
+
+	@Override
+	public void onDestroy() {
+	}
+
+	/**
+	 * @author lijingzuo 同步组
+	 */
+	public static class HttpGroupSync extends HttpGroup {
+
+		public HttpGroupSync(HttpGroupSetting setting) {
+			super(setting);
+		}
+
+		@Override
+		public void execute(final HttpRequest httpRequest) {
+			// HttpResponse httpResponse = null;
+			// HttpRequest httpRequest = HttpGroupSync.this.new
+			// HttpGet(httpSetting);
+			// if (httpList.size() < 1)// 通知组开始
+			// HttpGroupSync.this.onStart();
+			// httpList.add(httpRequest);
+			// httpResponse = httpRequest.handler();
+		}
+
+	}
+
+	/**
+	 * @author lijingzuo 异步池组
+	 */
+	public static class HttpGroupaAsynPool extends HttpGroup {
+
+		public HttpGroupaAsynPool(HttpGroupSetting setting) {
+			super(setting);
+		}
+
+		@Override
+		public void execute(final HttpRequest httpRequest) {
+
+			// 先放到第一线程池中，避免同时处理多个任务引起手机速度降低，这个池里也区分线
+			Runnable runnable = new Runnable() {
+				@Override
+				public void run() {
+					httpCount++;
+					// onReady
+					if (httpCount < 1) {// 通知组开始
+						HttpGroupaAsynPool.this.onStart();
+					}
+					
+					httpRequest.noNeedConnectionHandler();// 先执行不需要连网的任务
+
+					if (httpRequest.isNeedConnection) {// 需要连网取数据
+
+						final Runnable taskRunnable = new Runnable() {
+							@Override
+							public void run() {
+								httpRequest.needConnectionHandler();
+							}
+						};
+
+						if(httpRequest.getHttpSetting().isTopPriority()){
+							new Thread(taskRunnable).start();
+						}else{
+							if (httpRequest.getHttpSetting().getPriority() == HttpGroupSetting.PRIORITY_JSON) {// json放到第二个线程池里
+								PooledThread.getSecondThreadPool().offerTask(taskRunnable, httpRequest.getHttpSetting().getPriority());
+							} else {// 图片和file放第三线程池里
+								PooledThread.getThirdThreadPool().offerTask(taskRunnable, httpRequest.getHttpSetting().getPriority());
+							}
+						}
+					}
+				}
+			};
+			if(httpRequest.getHttpSetting().isTopPriority()){
+				new Thread(runnable).start();
+			}else{
+				PooledThread.getFirstThreadPool().offerTask(runnable, httpRequest.getHttpSetting().getPriority());
+			}
+		}
+	}
+
+	interface Handler {
+		void run();
+	}
+
+	/**
+	 * 停止控制器
+	 */
+	public interface StopController {
+		void stop();
+
+		boolean isStop();
+	}
+
+	/**
+	 * 请求
+	 */
+	public class HttpRequest implements StopController {
+
+		private static final String CONNECTION_RESET_BY_PEER = "Connection reset by peer";
+
+		// 停止控制器
+		private boolean stopFlag;
+
+		public boolean isStop() {
+			return stopFlag;
+		}
+
+		public void stop() {
+			stopFlag = true;
+		}
+
+		// 停止控制器
+
+		protected HttpSetting httpSetting;
+
+		protected HttpURLConnection conn;
+		protected InputStream inputStream;
+
+		protected HttpResponse httpResponse;
+
+		protected ArrayList<HttpError> errorList;
+
+		protected boolean manualRetry;
+
+		/**
+		 * 代表着本次连接是失败的，不可用。
+		 */
+		protected boolean connectionRetry;
+
+		private int currentHandlerIndex = 0;
+
+		private String thirdHost;
+
+		private ArrayList<HttpError> getErrorList() {
+			if (null == errorList) {
+				errorList = new ArrayList<HttpError>();
+			}
+			return errorList;
+		}
+
+		private HttpError getLastError() {
+			ArrayList<HttpError> errorList = getErrorList();
+			int size = errorList.size();
+			if (size > 0) {
+				return errorList.get(size - 1);
+			}
+			return null;
+		}
+
+		private void clearErrorList() {
+			getErrorList().clear();
+		}
+
+		public boolean isLastError() {// 判断是否多次尝试失败
+			boolean result = null != errorList && !(errorList.size() < httpSetting.getAttempts());// 需要与httpSetting的重试资料来判断
+			if (!result) {
+				HttpError lastError = getLastError();
+				if (null != lastError && lastError.isNoRetry()) {
+					result = true;
+				}
+			}
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- isLastError() -->> " + result);
+			}
+			return result;
+		}
+
+		public void throwError(HttpError error) {
+			ArrayList<HttpError> errorList = getErrorList();
+			errorList.add(error);
+			error.setTimes(errorList.size());
+			if (Log.I) {
+				Log.i("HttpGroup", "id:" + httpSetting.getId() + "- HttpError -->> " + error);
+			}
+			// 检查用户交互
+			checkErrorInteraction();
+		}
+
+		/**
+		 * 检查用户交互
+		 */
+		public void checkErrorInteraction() {
+			/*
+			 * 存在2种需要与用户交互的异常
+			 */
+			HttpError lastError = getLastError();
+			if (null != lastError && // 认证WIFI
+					HttpError.EXCEPTION == lastError.getErrorCode() && //
+					HttpError.EXCEPTION_MESSAGE_ATTESTATION_WIFI.equals(lastError.getException().getMessage())) {
+				alertAttestationWIFIDialog();
+			} else if (isLastError()) {// 如果已经达到自动尝试次数就弹出通知窗口
+				alertErrorDialog();
+			}
+		}
+
+		/**
+		 * 非线程安全
+		 */
+		class HttpDialogController extends DialogController {
+
+			protected ArrayList<HttpRequest> httpRequestList;
+			protected MyActivity myActivity;
+			
+			private boolean isSynchronizHTTP = true;// 弹框时，是否阻塞网络请求
+
+			/**
+			 * 初始化
+			 */
+			public void init(ArrayList<HttpRequest> httpRequestList, MyActivity myActivity) {
+				this.myActivity = myActivity;
+				this.httpRequestList = httpRequestList;
+				init(myActivity);
+			}
+
+			/**
+			 * 重试
+			 */
+			protected void actionRetry() {
+				actionCommon(true);
+			}
+
+			/**
+			 * 取消
+			 */
+			protected void actionCancel() {
+				actionCommon(false);
+			}
+			/**
+			 * 是否阻塞网络请求
+			 * @param isSynchronizHTTP
+			 */
+			public void setSynchronizHTTP(boolean isSynchronizHTTP) {
+				this.isSynchronizHTTP = isSynchronizHTTP;
+			}
+			
+			/**
+			 * 是否阻塞网络请求
+			 * @return
+			 */
+			public boolean isSynchronizHTTP() {
+				return isSynchronizHTTP;
+			}
+
+			// add by hanxudong
+			/**
+			 * 确定（去官方网站）
+			 */
+			protected void actionOfficialWebsite(MainActivity aMainActivity) {
+				if (Log.D) {
+					Log.d("Temp", "actionOfficialWebsite -->> ");
+				}
+				Uri uri = Uri.parse("http://m.360buy.com/download/downApp.html");
+				// myActivity.startActivity(new Intent(Intent.ACTION_VIEW,uri));
+				MyActivity.startActivityForResultNoExceptionStatic(aMainActivity, new Intent(Intent.ACTION_VIEW, uri), 1);
+				MyApplication.exitAll();
+			}
+
+			protected void actionCommon(boolean isRetry) {
+				if(null != alertDialog){
+					alertDialog.dismiss();
+				}
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- notifyUser() retry -->> httpRequestList.size() = " + httpRequestList.size());
+				}
+				synchronized (alertDialogStateMap) {
+					for (int i = 0; i < httpRequestList.size(); i++) {
+						HttpRequest httpRequest = httpRequestList.get(i);
+						if (isRetry) {
+							httpRequest.manualRetry = true;
+						}
+						synchronized (httpRequest) {
+							httpRequest.notify();
+						}
+					}
+					alertDialogStateMap.remove(myActivity);
+				}
+			}
+
+		}
+
+		/**
+		 * 弹出对话窗
+		 */
+		private void notifyUser(final HttpDialogController httpDialogController) {
+
+			final MyActivity myActivity = httpGroupSetting.getMyActivity();
+			if (null == myActivity) {// 跟界面无关的连接不弹窗
+				return;
+			}
+
+			boolean result = false;// 用于控制不要同一界面连续弹窗
+			ArrayList<HttpRequest> httpRequestList = null;
+			synchronized (alertDialogStateMap) {
+				httpRequestList = alertDialogStateMap.get(myActivity);// 该页面所关联的需弹窗网络异常通知
+				if (null == httpRequestList) {// 如果没有任何需弹窗网络异常通知
+					httpRequestList = new ArrayList<HttpRequest>();
+					alertDialogStateMap.put(myActivity, httpRequestList);
+					result = true;
+				}
+				httpRequestList.add(this);
+			}
+
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- notifyUser() -->> result = " + result);
+			}
+
+			if (result) {
+				// 弹出对话框
+				// 初始化
+				httpDialogController.init(httpRequestList, myActivity);
+
+				myActivity.post(new Runnable() {
+					@Override
+					public void run() {
+						httpDialogController.show();
+					}
+				});
+
+			}
+			
+			if(httpDialogController.isSynchronizHTTP){
+				// 本线程工作暂停，等待UI线程接受用户选择。
+				synchronized (HttpRequest.this) {
+					try {
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- dialog wait start -->> ");
+						}
+						HttpRequest.this.wait();
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- dialog wait end -->> ");
+						}
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+
+		}
+
+		/**
+		 * 一般异常对话框
+		 */
+		private void alertErrorDialog() {
+
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- alertErrorDialog() -->> ");
+			}
+
+			// 是否禁止通知用户处理
+			if (!httpSetting.isNotifyUser()) {
+				return;
+			}
+
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- alertErrorDialog() -->> true");
+			}
+
+			// 弹窗通知用户
+			HttpDialogController httpDialogController = new HttpDialogController() {
+
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					switch (which) {
+					case AlertDialog.BUTTON_POSITIVE:// （左边的按钮）重试
+						if (httpSetting.getAlertErrorDialogType() == HttpSetting.ERROR_DIALOG_TYPE_SETUP_CANCEL) {
+							actionCancel();
+							final MyActivity myActivity = MyApplication.getInstance().getCurrentMyActivity();
+							if (null != myActivity) {
+								Intent intent = null;
+								if (android.os.Build.VERSION.SDK_INT > 10) {
+									// 3.0以上打开设置界面，也可以直接用ACTION_WIRELESS_SETTINGS打开到wifi界面
+									intent = new Intent(android.provider.Settings.ACTION_SETTINGS);
+								} else {
+									intent = new Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS);
+								}
+
+								myActivity.startActivityNoException(intent);
+							}
+						} else {
+							actionRetry();
+						}
+						break;
+					case AlertDialog.BUTTON_NEGATIVE:// （右边的按钮）取消或退出
+						if(httpSetting.getAlertErrorDialogType() == HttpSetting.ERROR_DIALOG_TYPE_BACK_RETRY){
+							final MyActivity myActivity = MyApplication.getInstance().getCurrentMyActivity();
+							if(null != myActivity){
+								myActivity.finish();
+							}
+						}else{
+							actionCancel();
+						}
+						break;
+					}
+				}
+
+			};
+			
+			httpDialogController.setCanceledOnTouchOutside(false);
+			
+			httpDialogController.setMessage(MyApplication.getInstance().getText(R.string.alert_message_poor_network2));
+			
+			if(httpSetting.getAlertErrorDialogType() == HttpSetting.ERROR_DIALOG_TYPE_DEFAULT){
+				// 重试按钮
+				httpDialogController.setPositiveButton(MyApplication.getInstance().getText(R.string.retry));
+				// 退出或取消按钮
+				httpDialogController.setNegativeButton(MyApplication.getInstance().getText(httpSetting.isNotifyUserWithExit() ? R.string.exit : R.string.cancel));
+			}else if(httpSetting.getAlertErrorDialogType() == HttpSetting.ERROR_DIALOG_TYPE_ONLY_CANCEL){
+				// 确定：取消
+				httpDialogController.setNegativeButton(MyApplication.getInstance().getText(R.string.ok));
+			}else if(httpSetting.getAlertErrorDialogType() == HttpSetting.ERROR_DIALOG_TYPE_BACK_RETRY){
+				// 重试
+				httpDialogController.setPositiveButton(MyApplication.getInstance().getText(R.string.retry));
+				// 返回上一页
+				httpDialogController.setNegativeButton(MyApplication.getInstance().getText(R.string.back_page));
+			}else if(httpSetting.getAlertErrorDialogType() == HttpSetting.ERROR_DIALOG_TYPE_SETUP_CANCEL){
+				httpDialogController.setSynchronizHTTP(false);//网络线程可直接结束掉
+				// 设置网络
+				httpDialogController.setPositiveButton(MyApplication.getInstance().getText(R.string.go_setup));
+				// 取消
+				httpDialogController.setNegativeButton(MyApplication.getInstance().getText(R.string.cancel));
+			}
+			
+			
+			notifyUser(httpDialogController);
+
+		}
+
+		/**
+		 * 认证 WIFI 对话框
+		 */
+		private void alertAttestationWIFIDialog() {
+			// 弹出窗口
+			HttpDialogController httpDialogController = new HttpDialogController() {
+
+				private int state;
+
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					switch (which) {
+					case AlertDialog.BUTTON_POSITIVE:// （左边的按钮）确定
+						switch (state) {
+						case 0:// 第一次
+							if (Log.D) {
+								Log.d("HttpGroup", "http dialog BUTTON_POSITIVE -->> " + 1);
+							}
+							// 改变界面和功能
+							state = 1;
+							myActivity.post(new Runnable() {// 让窗口关闭后重新显示
+										public void run() {
+											if (Log.D) {
+												Log.d("HttpGroup", "http dialog change -->> ");
+											}
+											setMessage("现在是否重试？");
+											setPositiveButton("重试");
+											if (!alertDialog.isShowing()) {
+												alertDialog.show();
+											}
+											// 打开浏览器（这里要确保在所有UI操作之后执行）
+											Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://app.360buy.com/"));
+											intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+											myActivity.startActivityNoException(intent);
+										}
+									});
+							break;
+						case 1:// 第二次
+							if (Log.D) {
+								Log.d("HttpGroup", "http dialog BUTTON_POSITIVE -->> " + 2);
+							}
+							actionRetry();
+							break;
+						}
+						break;
+					case AlertDialog.BUTTON_NEGATIVE:// （右边的按钮）取消
+						if (Log.D) {
+							Log.d("HttpGroup", "http dialog BUTTON_NEGATIVE -->> " + 1);
+						}
+						actionCancel();
+						break;
+					}
+				}
+			};
+			httpDialogController.setTitle("WIFI认证");
+			httpDialogController.setMessage("您所连接的网络可能需要验证，现在打开浏览器进行验证？");
+			// （左边的按钮）重试
+			httpDialogController.setPositiveButton("确定");
+			// （右边的按钮）取消或退出
+			httpDialogController.setNegativeButton("取消");
+			notifyUser(httpDialogController);
+		}
+
+		// add by hanxudong
+		/**
+		 * 签名校验异常对话框
+		 */
+		private void alertSignatureFailedDialog() {
+
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- alertErrorDialog() -->> ");
+			}
+
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- alertErrorDialog() -->> true");
+			}
+
+			// 弹窗通知用户
+			HttpDialogController httpDialogController = new HttpDialogController() {
+				MyApplication application = MyApplication.getInstance();
+				final MainActivity mainActivity = application.getMainActivity();
+
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					switch (which) {
+					case AlertDialog.BUTTON_POSITIVE:// （右边的按钮）取消或退出
+						actionOfficialWebsite(mainActivity);
+						break;
+					}
+				}
+
+				@Override
+				public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+					// TODO Auto-generated method stub
+					return true;
+				}
+
+			};
+			httpDialogController.setTitle(MyApplication.getInstance().getText(R.string.alert_title_signature_error));
+			httpDialogController.setMessage(MyApplication.getInstance().getText(R.string.alert_message_signature_error));
+			// （左边的按钮）重试
+			httpDialogController.setPositiveButton("确定");
+			notifyUser(httpDialogController);
+
+		}
+
+		private ArrayList<Handler> handlers = new ArrayList<Handler>();
+
+		public HttpRequest(HttpSetting httpSetting) {
+			this.httpSetting = httpSetting;
+		}
+
+		public boolean isNeedConnection = false;// 该请求是否要网络，并进入到线程池中
+
+		/**
+		 * 不需要连网可执行的责任链
+		 */
+		public void noNeedConnectionHandler() {
+			handlers.add(paramHandler);
+			handlers.add(firstHandler);
+			handlers.add(testHandler);
+			handlers.add(cacheHandler);
+			nextHandler();
+		}
+
+		/**
+		 * 需要连网操作执行的责任链，需要被放入到线程池中。
+		 */
+		public void needConnectionHandler() {
+			if (isNeedConnection) {
+				handlers.clear();
+				handlers.add(connectionThreadPoolsHandler);
+				handlers.add(connectionHandler);
+				handlers.add(contentHandler);
+				nextHandler();
+			}
+		}
+
+		public HttpSetting getHttpSetting() {
+			return httpSetting;
+		}
+
+		private void nextHandler() {
+			int i = currentHandlerIndex;
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- nextHandler() i -->> " + currentHandlerIndex);
+			}
+			currentHandlerIndex++;
+			if (i < handlers.size()) {
+				handlers.get(i).run();
+				currentHandlerIndex = i;// 恢复层次指针到本层
+			}
+		}
+
+		private File findCachesFileByMd5() {
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- findCachesFileByMd5() -->> ");
+			}
+
+			Directory directory = null;
+			String fileName = httpSetting.getMd5();
+
+			// 1. 确定类型
+			switch (httpSetting.getType()) {
+
+			case HttpGroupSetting.TYPE_JSON: {// JSON
+				directory = FileService.getDirectory(FileService.JSON_DIR);
+				fileName += FileService.CACHE_EXT_NAME_JSON;
+				break;
+			}
+
+			case HttpGroupSetting.TYPE_IMAGE: {// IMAGE
+				directory = FileService.getDirectory(FileService.IMAGE_DIR);
+				fileName += FileService.CACHE_EXT_NAME_IMAGE;
+				break;
+			}
+
+			}
+
+			// 2. 查找文件
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- findCachesFileByMd5() directory -->> " + directory);
+			}
+			if (null == directory) {
+				return null;
+			}
+			File dir = directory.getDir();
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- findCachesFileByMd5() dir.exists() -->> " + dir.exists());
+			}
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- findCachesFileByMd5() dir.isDirectory() -->> " + dir.isDirectory());
+			}
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- findCachesFileByMd5() dir -->> " + dir);
+			}
+
+			if (null != directory.getPath()) {
+				final String filePath = directory.getPath() + File.separatorChar + fileName;
+
+				final File file = new File(filePath);
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- findCachesFileByMd5() filePath -->> " + filePath);
+				}
+				if (file.exists()) {
+					if (Log.D) {
+						Log.d("HttpGroup", "id:" + httpSetting.getId() + "- can find caches file by md5 -->> ");
+					}
+					return file;
+				}
+			}
+
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- canot find caches file by md5 -->> ");
+			}
+
+			return null;
+
+		}
+
+		/**
+		 * 参数
+		 */
+		private Handler paramHandler = new Handler() {
+			@Override
+			public void run() {
+				if (null != httpSetting.getFunctionId()) {
+					String functionId = httpSetting.getFunctionId();
+					httpSetting.putMapParams("functionId", functionId);
+					String body = httpSetting.getJsonParams().toString();
+					if (Log.I) {
+						Log.i("HttpGroup", "id:" + httpSetting.getId() + "- body -->> " + body);
+					}
+					httpSetting.putMapParams("body", body);
+				}
+				nextHandler();
+			}
+		};
+
+		/**
+		 * 设置纠正
+		 */
+		private Handler firstHandler = new Handler() {
+			@Override
+			public void run() {
+
+				// url （因为proxyHandler去掉了，而且connectHandler需要使用该url，在此设置url）
+				if (null == httpSetting.getUrl()) {
+					httpSetting.setUrl("http://" + httpSetting.getHost() + "/client.action");
+				}
+
+				// 继承组设置：
+				// 重试次数
+				if (httpSetting.getAttempts() == 0) {
+					httpSetting.setAttempts(attempts);
+				}
+				// 连接等待时间
+				if (httpSetting.getConnectTimeout() == 0) {
+					if(NetUtils.isWifi()){
+						httpSetting.setConnectTimeout(connectTimeoutForWIFI);
+					}else{
+						httpSetting.setConnectTimeout(connectTimeout);
+					}
+				}
+				// 读取等待时间
+				if (httpSetting.getReadTimeout() == 0) {
+					if(NetUtils.isWifi()){
+						httpSetting.setReadTimeout(readTimeoutForWIFI);
+					}else{
+						httpSetting.setReadTimeout(readTimeout);
+					}
+				}
+
+				// 使用 GET 的方式发出请求
+				if (httpSetting.getType() == HttpGroupSetting.TYPE_IMAGE// 如果是图片
+						|| httpSetting.getType() == HttpGroupSetting.TYPE_FILE) {// 如果是文件
+					httpSetting.setPost(false);
+				}
+
+				// 默认连接时间
+
+				// 默认读取时间 (修改超时机制后，此处不需要设置一个小时了。刘卫欢2012-3-12修改)
+				// if (httpSetting.getType() == HttpGroupSetting.TYPE_IMAGE) {// 如果是文件
+				// httpSetting.setReadTimeout(1000 * 60 * 60);// 读取超时（1个小时）
+				// }
+
+				// 默认缓存
+				if (httpSetting.getType() == HttpGroupSetting.TYPE_IMAGE) {// 如果是图片
+					httpSetting.setLocalFileCache(true);
+					httpSetting.setLocalFileCacheTime(CacheTimeConfig.IMAGE);// 图片默认缓存一天
+				}
+
+				// 全局初始化
+				if (httpSetting.getType() == HttpGroupSetting.TYPE_IMAGE) {// 如果是图片
+					httpSetting.setNeedGlobalInitialization(false);
+				}
+
+				if (httpSetting.isNeedGlobalInitialization()) {
+					// 2012-10-25 刘卫欢 后台服务器的考虑，在网络请求时，可以不用强制初始化网络，特注视以下代码
+					// GlobalInitialization.initNetwork(true);
+				}
+
+				// 组里面的连接累计量
+				addMaxStep(1);
+
+				urlParam();
+
+				if (checkModule(MODULE_STATE_DISABLE)) {// 检查接口是否禁用
+					if (Log.D) {
+						Log.d("HttpGroup", "id:" + httpSetting.getId() + "- functionId close -->> ");
+					}
+					return;
+				}
+
+				if ((TextUtils.isEmpty(httpSetting.getUrl()) && TextUtils.isEmpty(httpSetting.getFunctionId())) || //
+						httpSetting.getUrl().endsWith(".gif") || httpSetting.getUrl().endsWith(".bmp")) {
+					HttpError error = new HttpError();
+					error.setErrorCode(HttpError.RESPONSE_CODE);
+					error.setResponseCode(404);// 目前就当做404处理
+					throwError(error);
+					httpSetting.onError(getLastError());// 通知失败
+					return;// 根本没执行后来的？
+				} else {
+					nextHandler();
+
+					callBack();
+				}
+			}
+		};
+
+		// 回调
+		private void callBack() {
+
+			if (isNeedConnection) {// 本请求没有完成，还需要进入到线程池中连接网络，不执行以下回调
+				return;
+			}
+
+			addCompletesCount();
+			if (isLastError()) {
+				if (Log.I) {
+					Log.i("HttpGroup", "id:" + httpSetting.getId() + "- onError -->> ");
+				}
+				httpSetting.onError(getLastError());// 通知失败
+			} else {
+				if (Log.I) {
+					Log.i("HttpGroup", "id:" + httpSetting.getId() + "- onEnd -->> ");
+				}
+				addStep(1);
+				httpSetting.onEnd(httpResponse);// 通知成功
+			}
+		};
+
+		// interface HttpTestMappers {
+		//
+		// boolean
+		//
+		// }
+
+		/**
+		 * 测试
+		 */
+		private Handler testHandler = new Handler() {
+			@Override
+			public void run() {
+				if (Configuration.getBooleanProperty(Configuration.TEST_MODE, false)) {// 当前是否以测试模式运行
+
+					if ("getSlidingScreens".equals(httpSetting.getFunctionId())) {
+						String jsonstr = "{\"rightPages\":[{\"title\":\"服装城\",\"fuctionModels\":[{\"functionName\":\"专场热卖商品\",\"functionID\":\"getHotSaleListByType\",\"params\":\"type=101\"},{\"functionName\":\"活动列表\",\"functionID\":\"getCmsActivityListByType\",\"params\":\"type=101\"}]},{\"title\":\"数码馆\",\"fuctionModels\":[{\"functionName\":\"专场热卖商品\",\"functionID\":\"getHotSaleListByType\",\"params\":\"type=102\"},{\"functionName\":\"活动列表\",\"functionID\":\"getCmsActivityListByType\",\"params\":\"type=102\"}]},{\"title\":\"美护坊\",\"fuctionModels\":[{\"functionName\":\"专场热卖商品\",\"functionID\":\"getHotSaleListByType\",\"params\":\"type=103\"},{\"functionName\":\"活动列表\",\"functionID\":\"getCmsActivityListByType\",\"params\":\"type=103\"}]},{\"title\":\"促销大卖场\",\"fuctionModels\":[{\"functionName\":\"促销大卖场\",\"functionID\":\"getCmsPromotionsAll\",\"params\":\"\"}]}],\"tip\":\"向右滑动更精彩\",\"code\":\"0\",\"leftPages\":\"\"}";
+						
+						httpResponse = new HttpResponse();
+						httpResponse.setString(jsonstr);
+						try {
+							httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+						} catch (JSONException e) {
+							e.printStackTrace();
+						}
+					}else if ("getHotSaleListByType".equals(httpSetting.getFunctionId())) {
+						String jsonstr = "{\"hotSaleList\":[{\"jdPrice\":\"375.00\",\"wname\":\"西厢记\",\"totalEvaluation\":0,\"adword\":\"\",\"martPrice\":\"22.0000\",\"startRemainTime\":0,\"book\":\"false\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"10008472\",\"imageurl\":\"http://img10.360buyimg.com/n1/10366/bdfdf6a4-83b2-4a39-a988-b65167c33195.jpg\"},{\"jdPrice\":\"375.00\",\"wname\":\"西厢记\",\"totalEvaluation\":0,\"adword\":\"\",\"martPrice\":\"22.0000\",\"startRemainTime\":0,\"book\":\"false\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"10008472\",\"imageurl\":\"http://img10.360buyimg.com/n1/10366/bdfdf6a4-83b2-4a39-a988-b65167c33195.jpg\"},{\"jdPrice\":\"375.00\",\"wname\":\"西厢记\",\"totalEvaluation\":0,\"adword\":\"\",\"martPrice\":\"22.0000\",\"startRemainTime\":0,\"book\":\"false\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"10008472\",\"imageurl\":\"http://img10.360buyimg.com/n1/10366/bdfdf6a4-83b2-4a39-a988-b65167c33195.jpg\"},{\"jdPrice\":\"375.00\",\"wname\":\"西厢记\",\"totalEvaluation\":0,\"adword\":\"\",\"martPrice\":\"22.0000\",\"startRemainTime\":0,\"book\":\"false\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"10008472\",\"imageurl\":\"http://img10.360buyimg.com/n1/10366/bdfdf6a4-83b2-4a39-a988-b65167c33195.jpg\"},{\"jdPrice\":\"375.00\",\"wname\":\"西厢记\",\"totalEvaluation\":0,\"adword\":\"\",\"martPrice\":\"22.0000\",\"startRemainTime\":0,\"book\":\"false\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"10008472\",\"imageurl\":\"http://img10.360buyimg.com/n1/10366/bdfdf6a4-83b2-4a39-a988-b65167c33195.jpg\"},{\"wname\":\"非常妈妈\",\"totalEvaluation\":0,\"adword\":\"\",\"martPrice\":\"16.0000\",\"startRemainTime\":0,\"book\":\"false\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"10368686\",\"imageurl\":\"http://img10.360buyimg.com/n1/19452/156afa86-9825-40e7-8c55-af3b53e14372.jpg\"}],\"title\":\"服装城\",\"code\":\"0\"}";
+						
+						httpResponse = new HttpResponse();
+						httpResponse.setString(jsonstr);
+						try {
+							httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+						} catch (JSONException e) {
+							e.printStackTrace();
+						}
+					}else if ("getCmsActivityListByType".equals(httpSetting.getFunctionId())) {
+						String jsonstr = "{\"activityList\":[{\"content\":\"\",\"title\":\"手机数码活动1-勿删\",\"end_date\":\"2012-12-31\",\"catelogyId\":652,\"activity_id\":472,\"start_date\":\"2012-12-05\",\"imageUrl\":\"http://img10.360buyimg.com/n1/g8/M03/0C/1A/rBEHaFCLVWEIAAAAAAF5O72teMsAACgawOjBSAAAXlT725.jpg\"},{\"content\":\"\",\"title\":\"手机数码活动1-勿删\",\"end_date\":\"2012-12-31\",\"catelogyId\":652,\"activity_id\":472,\"start_date\":\"2012-12-05\",\"imageUrl\":\"http://img10.360buyimg.com/n1/g8/M03/0C/1A/rBEHaFCLVWEIAAAAAAF5O72teMsAACgawOjBSAAAXlT725.jpg\"},{\"content\":\"\",\"title\":\"手机数码活动1-勿删\",\"end_date\":\"2012-12-31\",\"catelogyId\":652,\"activity_id\":472,\"start_date\":\"2012-12-05\",\"imageUrl\":\"http://img10.360buyimg.com/n1/g8/M03/0C/1A/rBEHaFCLVWEIAAAAAAF5O72teMsAACgawOjBSAAAXlT725.jpg\"},{\"content\":\"\",\"title\":\"手机数码活动1-勿删\",\"end_date\":\"2012-12-31\",\"catelogyId\":652,\"activity_id\":472,\"start_date\":\"2012-12-05\",\"imageUrl\":\"http://img10.360buyimg.com/n1/g8/M03/0C/1A/rBEHaFCLVWEIAAAAAAF5O72teMsAACgawOjBSAAAXlT725.jpg\"},{\"content\":\"\",\"title\":\"手机数码活动1-勿删\",\"end_date\":\"2012-12-31\",\"catelogyId\":652,\"activity_id\":472,\"start_date\":\"2012-12-05\",\"imageUrl\":\"http://img10.360buyimg.com/n1/g8/M03/0C/1A/rBEHaFCLVWEIAAAAAAF5O72teMsAACgawOjBSAAAXlT725.jpg\"}],\"title\":\"数码馆\",\"code\":\"0\"}";
+						
+						httpResponse = new HttpResponse();
+						httpResponse.setString(jsonstr);
+						try {
+							httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+						} catch (JSONException e) {
+							e.printStackTrace();
+						}
+					}else if ("strollChannel".equals(httpSetting.getFunctionId())) {
+						String jsonstr = "{\"guang_index_list\":[{\"foldFlag\":1,\"icon\":\"\",\"title\":\"Win8专区\",\"type\":0,\"functionId\":\"sectionlist_festivalSection\",\"url\":\"\"},{\"foldFlag\":1,\"icon\":\"\",\"title\":\"特惠精选\",\"type\":0,\"functionId\":\"sectionlist_specialPrice\",\"url\":\"\"}],\"code\":\"0\"}";
+						
+						httpResponse = new HttpResponse();
+						httpResponse.setString(jsonstr);
+						try {
+							httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+						} catch (JSONException e) {
+							e.printStackTrace();
+						}
+					}else if ("sectionlist_specialPrice".equals(httpSetting.getFunctionId())) {
+						String jsonstr = "{\"wareInfoList\":[{\"wname\":\"雅诗兰黛鲜活营养红石榴精华水200ml\",\"totalEvaluation\":0,\"adword\":\"明星产品全场直降\",\"martPrice\":\"750.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"375.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"1000731821\",\"imageurl\":\"http://img10.360buyimg.com/n4/9420/7e3296c1-b0ae-4de5-ae9e-3da5086fa8f1.jpg\"},{\"wname\":\"CAMEL/骆驼 2012新款男鞋男士商务鞋休闲男鞋休闲真皮皮鞋 棕色 43\",\"totalEvaluation\":0,\"adword\":\"领券下单满450减50 领券时间12月7日起 用券时间：12月12日 仅限一天！\",\"martPrice\":\"897.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"299.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"1004863407\",\"imageurl\":\"http://img10.360buyimg.com/n4/g7/M03/05/1D/rBEHZlBRPdcIAAAAAAGwEo3dotcAABKJgOfiIMAAbAq828.jpg\"},{\"wname\":\"索尼（Sony）MDR-EX42LP 施华洛世奇锆石耳机 雏菊白\",\"totalEvaluation\":0,\"adword\":\"【直降120元】女孩最佳礼物 听音乐也时尚\",\"martPrice\":\"249.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"99.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"599354\",\"imageurl\":\"http://img10.360buyimg.com/n4/2425/3703d862-fbe2-425b-919b-c36b6ec1ff90.jpg\"},{\"wname\":\"EAIBOSSCAN 2012秋冬新款男士时尚休闲针织衫 男士线衫 7732 3# M\",\"totalEvaluation\":0,\"adword\":\"疯狂秒杀价，不抢你在等什么？\",\"martPrice\":\"399.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"58.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"1012503502\",\"imageurl\":\"http://img10.360buyimg.com/n4/g7/M03/0E/09/rBEHZVCi_ogIAAAAAAPXv8RezLMAACyyAHvOFYAA9fX718.jpg\"},{\"wname\":\"飞跃多功能家用缝纫机FY811\",\"totalEvaluation\":0,\"adword\":\"年末大促！参加日百满299元返399元东券活动！时间12.10 9:00-12.21 18:00\",\"martPrice\":\"688.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"479.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"590241\",\"imageurl\":\"http://img10.360buyimg.com/n4/2585/2c4f25ca-e38f-44ac-b358-ffdfe8d7ca3c.jpg\"},{\"wname\":\"欧润哲 不锈钢心形牙刷架配波浪情侣口杯套装（蓝色+玫红色）\",\"totalEvaluation\":0,\"adword\":\"年末大促！参加日百满299元返399元东券活动！时间12.10 9:00-12.21 18:00  \",\"martPrice\":\"99.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"79.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"713619\",\"imageurl\":\"http://img10.360buyimg.com/n4/g8/M03/07/00/rBEHaFBWuPsIAAAAAAIfOgYhOqUAABXmQLCJTYAAh9S366.jpg\"},{\"wname\":\"Gateway NE71B02c 17.3英寸笔记本电脑（E-450 2G 500G D刻 USB3.0 高清摄像头 6芯电池 Linux）黑\",\"totalEvaluation\":0,\"adword\":\"直降600元，17.3英寸超大屏显示 完美体验！\",\"martPrice\":\"3299.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"2499.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"657917\",\"imageurl\":\"http://img10.360buyimg.com/n4/g5/M01/02/02/rBEDik_NwScIAAAAAAFfyYGSc9AAAAZygM0ZFoAAV_h166.jpg\"},{\"wname\":\"空间生活安吉拉可转可遥办公电脑椅ITY60128RW\",\"totalEvaluation\":0,\"adword\":\"年末大促！参加日百满299元返399元东券活动！时间12.10 9:00-12.21 18:00\",\"martPrice\":\"620.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"299.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"672774\",\"imageurl\":\"http://img10.360buyimg.com/n4/g5/M02/12/14/rBEIDE_yxkUIAAAAAADtD-apgp4AADpAQPB8RUAAO0n619.jpg\"},{\"wname\":\"TPOS 18M11W 11000mAh便携式移动电源  白色（适用于苹果iPad、iPhone、三星S3、HTC、小米等手机） \",\"totalEvaluation\":0,\"adword\":\"\",\"martPrice\":\"659.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"299.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"348042\",\"imageurl\":\"http://img10.360buyimg.com/n4/4268/d18cfdd0-8293-445c-9230-d07282c7b260.jpg\"}],\"code\":\"0\"}";
+						
+						httpResponse = new HttpResponse();
+						httpResponse.setString(jsonstr);
+						try {
+							httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+						} catch (JSONException e) {
+							e.printStackTrace();
+						}
+					}else if ("sectionlist_festivalSection".equals(httpSetting.getFunctionId())) {
+						String jsonstr = "{\"wareInfoList\":[{\"wname\":\"三星（SAMSUNG）XE500T1C-A01CN 11.6英寸平板电脑(Z2760 2G 64G ssd 集成显卡 WIN8 蓝牙 触控屏）蓝色\",\"totalEvaluation\":0,\"adword\":\"WIN8平板 带给你全新体验！\",\"martPrice\":\"5699.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"4699.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"742507\",\"imageurl\":\"http://img10.360buyimg.com/n4/g9/M03/08/1C/rBEHaVB733QIAAAAAAHmcBIIfFsAABvRQMYxBUAAeaI119.jpg\"},{\"wname\":\"华硕（ASUS）VivoBook S400E3317CA 14.0英寸触控超极本（i5-3317U 4G 500G+24G固态硬盘 Win8 爵士黑）\",\"totalEvaluation\":0,\"adword\":\"\",\"martPrice\":\"6999.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"5299.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"743579\",\"imageurl\":\"http://img10.360buyimg.com/n4/g7/M03/0C/17/rBEHZlCJ6vUIAAAAAAGsWUnswLIAACfVwOhMZkAAaxx266.jpg\"},{\"wname\":\"ThinkPad S230U-3QC 12.5英寸超极本 (i5-3317U 4G 500G+24G SSD HD4000 蓝牙 摄像头 Win8）摩卡黑\",\"totalEvaluation\":0,\"adword\":\"\",\"martPrice\":\"7199.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"6999.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"754012\",\"imageurl\":\"http://img10.360buyimg.com/n4/g6/M04/01/0D/rBEGDFCQwSMIAAAAAAHIbCk_-YkAAARpgFTSLsAAciE780.jpg\"},{\"wname\":\"三星（SAMSUNG）DP300A2A-B01CN 21.5英寸一体机电脑(G645T 4G 500GB 核芯显卡 WIN8 摄像头 黑色）\",\"totalEvaluation\":0,\"adword\":\"预装WIN8系统的一体机 带您体验新感觉！\",\"martPrice\":\"5099.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"4099.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"742593\",\"imageurl\":\"http://img10.360buyimg.com/n4/g7/M03/0C/17/rBEHZlCJ6lAIAAAAAAG9YW4RCf8AACfVwDkiTEAAb15745.jpg\"},{\"wname\":\"宏碁(Acer) A7600U 27英寸一体电脑 （i7-3630QM 8G 1TB+32G 2G独显 蓝光刻录 无线键鼠 WIFI 蓝牙 Win8）\",\"totalEvaluation\":0,\"adword\":\"27寸全高清10点触控屏，蓝光COMB0,USB3.0支持关机充电，蓝牙，超薄外观，预计12月中旬到货\",\"martPrice\":\"21599.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"17999.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"764305\",\"imageurl\":\"http://img10.360buyimg.com/n4/g9/M02/0E/0E/rBEHalCkqDsIAAAAAAEq76ZzhpYAAC0egI7R5IAASsH471.jpg\"},{\"wname\":\"三星（SAMSUNG）NP535U3C-A05CN 13.3英寸超薄本 (A6-4455M 4G 500G 核芯显卡 WIN8 蓝牙4.0）粉色\",\"totalEvaluation\":0,\"adword\":\"附三星原装包！\",\"martPrice\":\"5699.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"4699.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"742606\",\"imageurl\":\"http://img10.360buyimg.com/n4/g6/M02/00/1E/rBEGC1CJ6scIAAAAAAHuOdN2WwUAAAL-ADKYCkAAe5R475.jpg\"},{\"wname\":\"三星（SAMSUNG）NP900X3C-A02CN 13.3英寸超极本 (i5-3317M 4G 128G SSD 核芯显卡 WIN8 蓝牙4.0）蓝黑色\",\"totalEvaluation\":0,\"adword\":\"赠送价值499元希捷移动硬盘！\",\"martPrice\":\"11099.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"9999.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"742589\",\"imageurl\":\"http://img10.360buyimg.com/n4/g6/M01/00/1E/rBEGF1CJ6kQIAAAAAAHAVuuZneAAAAL9wMcuNAAAcBu312.jpg\"},{\"wname\":\"惠普（hp）Pavilion14-B042TU（C8C74PA）14.0英寸超极本（i3-3217U 2G 320G+32G SSD Win8 黑色）\",\"totalEvaluation\":0,\"adword\":\"\",\"martPrice\":\"5499.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"3899.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"744731\",\"imageurl\":\"http://img10.360buyimg.com/n4/g9/M03/0C/17/rBEHaVCJ6wsIAAAAAAGkb8l7l7EAACfVwOK9z4AAaSH300.jpg\"},{\"wname\":\"戴尔(Dell) XPS12R-1708 12.5寸超极本 （i7-3517U 8G 256G固态硬盘 蓝牙 WIN8 触控翻转屏1920*1080 ）\",\"totalEvaluation\":0,\"adword\":\"\",\"martPrice\":\"13999.0000\",\"startRemainTime\":0,\"book\":\"false\",\"jdPrice\":\"12999.00\",\"endRemainTime\":0,\"canFreeRead\":\"false\",\"wareId\":\"766403\",\"imageurl\":\"http://img10.360buyimg.com/n4/g8/M00/0F/0B/rBEHaFCvVpgIAAAAAAEVVIZHAEMAADAJwLuffsAARVs632.jpg\"}],\"code\":\"0\"}";
+						
+						httpResponse = new HttpResponse();
+						httpResponse.setString(jsonstr);
+						try {
+							httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+						} catch (JSONException e) {
+							e.printStackTrace();
+						}
+					}else if("getCmsPromotionsAll".equals(httpSetting.getFunctionId())) {
+						String jsonStr = "{\"cmsPromotionsAll\":[{\"promition_info\":\"规则\",\"catelogyId\":652,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g9/M03/0D/16/rBEHaVCY2-sIAAAAAAN7z1lgq_cAACrXgNYClwAA3vn853.jpg\",\"promotion_name\":\"手机数码促销专场\",\"promotion_id\":11},{\"promition_info\":\"服装鞋帽\",\"catelogyId\":1315,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g6/M03/01/1D/rBEGC1CY3DoIAAAAAAN7zxzsoosAAAX_wHLFwoAA3vn248.jpg\",\"promotion_name\":\"服装鞋帽促销专场\",\"promotion_id\":14},{\"promition_info\":\"注册以上会员均可参加此活动\",\"catelogyId\":1713,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g7/M03/0D/16/rBEHZVCY274IAAAAAAN7z1oeZXMAACrXgIU-uwAA3vn385.jpg\",\"promotion_name\":\"图书促销专场\",\"promotion_id\":8},{\"promition_info\":\"电脑、办公\",\"catelogyId\":670,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g8/M03/0D/16/rBEHZ1CY3B8IAAAAAAN7zzWtp2EAACrXgMBqZIAA3vn128.jpg\",\"promotion_name\":\"电脑办公促销专场\",\"promotion_id\":12},{\"promition_info\":\"个护化妆\",\"catelogyId\":1316,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g6/M03/01/1D/rBEGC1CY3EsIAAAAAAN7z9GVGQAAAAX_wKoHV4AA3vn536.jpg\",\"promotion_name\":\"个护化妆促销专场\",\"promotion_id\":15},{\"promition_info\":\"规则\",\"catelogyId\":737,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g7/M03/0D/16/rBEHZlCY2-sIAAAAAAN7z66FoZQAACrXwGO_tsAA3vn629.jpg\",\"promotion_name\":\"家用电器促销专场\",\"promotion_id\":10},{\"promition_info\":\"无\",\"catelogyId\":1319,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g6/M05/02/05/rBEGC1Cbk0AIAAAAAAN7z4UVBZcAAAbTwG7q2gAA3vn241.jpg\",\"promotion_name\":\"母婴促销专场\",\"promotion_id\":31},{\"promition_info\":\"家居家装\",\"catelogyId\":1620,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g8/M03/0D/16/rBEHZ1CY3C8IAAAAAAN7z5Yz-y8AACrXwAEssgAA3vn269.jpg\",\"promotion_name\":\"家居家装促销专场\",\"promotion_id\":13},{\"promition_info\":\"运动健康\",\"catelogyId\":1318,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g9/M03/0D/16/rBEHaVCY3EwIAAAAAAN7z0YyvTsAACrXwCsqeMAA3vn624.jpg\",\"promotion_name\":\"运动健康促销专场\",\"promotion_id\":17},{\"promition_info\":\"礼品箱包\",\"catelogyId\":1672,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g9/M03/0D/16/rBEHalCY3FkIAAAAAAN7z7Fqbb4AACrXgOmsisAA3vn576.jpg\",\"promotion_name\":\"礼品箱包促销专场\",\"promotion_id\":16},{\"promition_info\":\"汽车用品\",\"catelogyId\":6728,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g8/M03/0D/16/rBEHaFCY3HQIAAAAAAN7zxsi4osAACrXwA2iAgAA3vn066.jpg\",\"promotion_name\":\"汽车用品促销专场\",\"promotion_id\":18},{\"promition_info\":\"厨具\",\"catelogyId\":6196,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g8/M03/0D/16/rBEHaFCY3Q0IAAAAAAN7z9aasoQAACrXwOWtGIAA3vn318.jpg\",\"promotion_name\":\"厨具促销专场\",\"promotion_id\":24},{\"promition_info\":\"钟表\",\"catelogyId\":5025,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g9/M03/0D/16/rBEHalCY3O8IAAAAAAN7zwhI72kAACrXwJkNuEAA3vn875.jpg\",\"promotion_name\":\"钟表促销专场\",\"promotion_id\":22},{\"promition_info\":\"珠宝首饰\",\"catelogyId\":6144,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g8/M03/0D/16/rBEHZ1CY3QMIAAAAAAN7z032WDsAACrXwJERfcAA3vn458.jpg\",\"promotion_name\":\"珠宝首饰促销专场\",\"promotion_id\":23},{\"promition_info\":\"宠物生活\",\"catelogyId\":6994,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g6/M04/01/1D/rBEGC1CY3UIIAAAAAAN7z-Y_B0AAAAYAALPB2MAA3vn201.jpg\",\"promotion_name\":\"宠物生活促销专场\",\"promotion_id\":26},{\"promition_info\":\"票务\",\"catelogyId\":4938,\"imageUrl\":\"http://img30.360buyimg.com/mobilecms/s310x102_g6/M04/01/1D/rBEGF1CY3MEIAAAAAAN7z9yyEmoAAAYAAC6-H0AA3vn379.jpg\",\"promotion_name\":\"票务促销专场\",\"promotion_id\":21}],\"code\":\"0\"}";
+						httpResponse = new HttpResponse();
+						httpResponse.setString(jsonStr);
+						try {
+							httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+						} catch (JSONException e) {
+							e.printStackTrace();
+						}
+					}
+					
+					
+					// else //
+					// if ("msgSummaryList".equals(httpSetting.getFunctionId())) {
+					// String jsonstr = "";
+					// if (test == 0) {
+					// jsonstr =
+					// "{\"code\": \"0\",\"msgList\": [{\"content\": \"亲,奧斯丁购!\",\"created\": \"2012-06-26 17:42:56\",\"forward\": \"msgDetail\",\"forwardId\": \"6_4feadf43a113e7fae074bce9\",\"forwardType\": 3,\"title\": \"降价通知1\"}]}";
+					// } else if (test == 1) {
+					// jsonstr =
+					// "{\"code\": \"0\",\"msgList\": [{\"content\": \"亲,werwer!\",\"created\": \"2012-06-26 17:42:56\",\"forward\": \"msgDetail\",\"forwardId\": \"6_4feadf43a113e7fae074bce9\",\"forwardType\": 1,\"title\": \"降价通知2\"}]}";
+					// } else if (test == 2) {
+					// jsonstr =
+					// "{\"code\": \"0\",\"msgList\": [{\"content\": \"亲,诺dfgdfgdrg请赶紧抢购!\",\"created\": \"2012-06-26 17:42:56\",\"forward\": \"msgDetail\",\"forwardId\": \"6_4feadf43a113e7fae074bce9\",\"forwardType\": 2,\"title\": \"降价通知3\"}]}";
+					// }
+					// httpResponse = new HttpResponse();
+					// httpResponse.setString(jsonstr);
+					// try {
+					// httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+					// } catch (JSONException e) {
+					// e.printStackTrace();
+					// }
+					// }
+					// if ("couponList".equals(httpSetting.getFunctionId())) {
+					// httpResponse = new HttpResponse();
+					// String str =
+					// "{\"code\":\"0\",\"couponList\":[{\"amountMoney\":\"20.0\",\"endTime\":\"2013-06-20\",\"faceValue\":\"10.0\",\"fromTime\":\"2012-07-09\",\"id\":\"30068327\",\"scope\":\"全品类\",\"typeDescription\":\"东券\"},{\"amountMoney\":\"20.0\",\"endTime\":\"2013-06-20\",\"faceValue\":\"10.0\",\"fromTime\":\"2012-07-09\",\"id\":\"30068326\",\"scope\":\"全品类\",\"typeDescription\":\"东券\"},{\"amountMoney\":\"20.0\",\"endTime\":\"2013-06-20\",\"faceValue\":\"10.0\",\"fromTime\":\"2012-07-09\",\"id\":\"30068325\",\"scope\":\"全品类\",\"typeDescription\":\"东券\"},{\"amountMoney\":\"20.0\",\"endTime\":\"2013-06-20\",\"faceValue\":\"10.0\",\"fromTime\":\"2012-07-09\",\"id\":\"30068324\",\"scope\":\"全品类\",\"typeDescription\":\"东券\"},{\"amountMoney\":\"20.0\",\"endTime\":\"2013-06-20\",\"faceValue\":\"10.0\",\"fromTime\":\"2012-07-09\",\"id\":\"30068323\",\"scope\":\"全品类\",\"typeDescription\":\"东券\"},{\"amountMoney\":\"20.0\",\"endTime\":\"2013-06-20\",\"faceValue\":\"10.0\",\"fromTime\":\"2012-07-09\",\"id\":\"30068322\",\"scope\":\"全品类\",\"typeDescription\":\"东券\"},{\"amountMoney\":\"20.0\",\"endTime\":\"2013-06-20\",\"faceValue\":\"10.0\",\"fromTime\":\"2012-07-09\",\"id\":\"30068321\",\"scope\":\"全品类\",\"typeDescription\":\"东券\"},{\"amountMoney\":\"20.0\",\"endTime\":\"2013-06-20\",\"faceValue\":\"10.0\",\"fromTime\":\"2012-07-09\",\"id\":\"30068320\",\"scope\":\"全品类\",\"typeDescription\":\"东券\"},{\"amountMoney\":\"20.0\",\"endTime\":\"2013-06-20\",\"faceValue\":\"10.0\",\"fromTime\":\"2012-07-09\",\"id\":\"30068319\",\"scope\":\"全品类\",\"typeDescription\":\"东券\"},{\"amountMoney\":\"20.0\",\"endTime\":\"2013-06-20\",\"faceValue\":\"10.0\",\"fromTime\":\"2012-07-09\",\"id\":\"30068318\",\"scope\":\"全品类\",\"typeDescription\":\"东券\"}]}";
+					// httpResponse.setString(str);
+					// try {
+					// httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+					// } catch (JSONException e) {
+					// e.printStackTrace();
+					// }
+					//
+					// if (Log.D) {
+					// Log.d("HttpGroup", "id:" + httpSetting.getId() + "- test json file -->> ");
+					// }
+					// }
+					// else if ("getCouponAndBalance".equals(httpSetting.getFunctionId())) {
+					// httpResponse = new HttpResponse();
+					// String str = "{\"balance\":0.0,\"code\":\"0\",\"couponCount\":432,\"dongCouponCount\":216,\"giftCardCount\":0,\"jingCouponCount\":216}";
+					// httpResponse.setString(str);
+					// try {
+					// httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+					// } catch (JSONException e) {
+					// e.printStackTrace();
+					// }
+					//
+					// if (Log.D) {
+					// Log.d("HttpGroup", "id:" + httpSetting.getId() + "- test json file -->> ");
+					// }
+					// }
+					// else if("login".equals(httpSetting.getFunctionId())) {
+					// String jsonstr = "{\"code\":\"8\",\"success\":\"true\"}";
+					// httpResponse = new HttpResponse();
+					// httpResponse.setString(jsonstr);
+					// try {
+					// httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+					// } catch (JSONException e) {
+					// e.printStackTrace();
+					// }
+					// }
+					// else if ("getCouponAndBalance".equals(httpSetting.getFunctionId())) {
+					// String action = null;
+					// try {
+					// action = httpSetting.getJsonParams().getString("action");
+					// } catch (JSONException e) {
+					// e.printStackTrace();
+					// }
+					// if ("login".equals(action)) {
+					// String jsonstr = "{\"balance\":0.0,\"code\":\"0\",\"couponCount\":432,\"dongCouponCount\":216,\"giftCardCount\":0,\"jingCouponCount\":216}";
+					// httpResponse = new HttpResponse();
+					// httpResponse.setString(jsonstr);
+					// try {
+					// httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+					// } catch (JSONException e) {
+					// e.printStackTrace();
+					// }
+					// if (Log.D) {
+					// Log.d("HttpGroup", "id:" + httpSetting.getId() + "- test json file -->> ");
+					// }
+					// }
+					// }
+					// else if ("xxx".equals(httpSetting.getFunctionId())) {
+					// String jsonstr =
+					// "{\"code\":\"0\",\"wareInfoList\":[{\"adword\":\"\",\"book\":\"false\",\"imageurl\":\"http:\\/\\/img10.360buyimg.com\\/n4\\/3014\\/7f11953f-cfdf-40dc-b8f2-d679929d0bde.jpg\",\"jdPrice\":\"149.00\",\"wareId\":\"371188\",\"wmaprice\":\"http:\\/\\/price.360buy.com\\/P2878503C2C362D1963487A0698370E18,1.png\",\"wname\":\"LOREAL欧莱雅雪颜美白乳液125ml\"},{\"adword\":\"\",\"book\":\"false\",\"imageurl\":\"http:\\/\\/img10.360buyimg.com\\/n4\\/1529\\/8324d12e-dfb0-4f0f-b250-a94d30e109f4.jpg\",\"jdPrice\":\"179.00\",\"wareId\":\"189052\",\"wmaprice\":\"http:\\/\\/price.360buy.com\\/PE95CFF2F45AEAB28D701D58676559284,1.png\",\"wname\":\"Burberry博柏利英伦迷情男士香水30ml\"},{\"adword\":\"\",\"book\":\"false\",\"imageurl\":\"http:\\/\\/img10.360buyimg.com\\/n4\\/3774\\/f0755f97-d9c3-4715-b831-e47d003ae0c7.jpg\",\"jdPrice\":\"1399.00\",\"wareId\":\"174707\",\"wmaprice\":\"http:\\/\\/price.360buy.com\\/P4E0C840EB02087DC1506CFD37C7BE261,1.png\",\"wname\":\"三星（SAMSUNG）SCX-4321 黑白激光多功能一体机 限时抢购!( 带输稿器)\"}]}";
+					// httpResponse = new HttpResponse();
+					// httpResponse.setString(jsonstr);
+					// try {
+					// httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+					// } catch (JSONException e) {
+					// e.printStackTrace();
+					// }
+					// if (Log.D) {
+					// Log.d("HttpGroup", "id:" + httpSetting.getId() + "- test json file -->> ");
+					// }
+					// } else if ("indexContent".equals(httpSetting.getFunctionId())) {
+					// String jsonstr =
+					// "{\"code\":\"0\",\"contentList\":[{\"foldFlag\":0,\"functionId\":\"xxx\",\"icon\":\"http:\\/\\/img14.360buyimg.com\\/n3\\/4296\\/617ebd78-7f53-4caa-8f44-e0825101e02e.jpg\",\"title\":\"x疯狂抢购很长很长很长很长很长很长很长很长很长很长很长\",\"type\":0,\"url\":\"http:\\/\\/www.baidu.com\"},{\"foldFlag\":0,\"functionId\":\"festivalSection\",\"icon\":\"\",\"title\":\"圣诞促销\",\"type\":0,\"url\":\"\"},{\"foldFlag\":0,\"functionId\":\"specialPriceIndex\",\"icon\":\"\",\"title\":\"特价专区\",\"type\":0,\"url\":\"\"},{\"foldFlag\":0,\"functionId\":\"jdNews\",\"icon\":\"http:\\/\\/img14.360buyimg.com\\/n3\\/4296\\/617ebd78-7f53-4caa-8f44-e0825101e02e.jpg\",\"title\":\"京东快报\",\"type\":4,\"url\":\"http:\\/\\/www.360buy.com\"},{\"foldFlag\":1,\"functionId\":\"search\",\"icon\":\"http:\\/\\/img14.360buyimg.com\\/n3\\/4296\\/617ebd78-7f53-4caa-8f44-e0825101e02e.jpg\",\"title\":\"搜索商品\",\"type\":2,\"url\":\"http:\\/\\/www.360buy.com\"}],\"hotword\":\"乔布斯\"}";
+					// httpResponse = new HttpResponse();
+					// httpResponse.setString(jsonstr);
+					// try {
+					// httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+					// } catch (JSONException e) {
+					// e.printStackTrace();
+					// }
+					// if (Log.D) {
+					// Log.d("HttpGroup", "id:" + httpSetting.getId() + "- test json file -->> ");
+					// }
+					// } else if ("limitTimeBuy".equals(httpSetting.getFunctionId())) {
+					// String jsonstr =
+					// "{\"code\": \"0\",\"limitTimeBuyWareInfos\": [{\"wname\": \"TCL 4211CDS 42英寸 液晶电视 全高清双HDMI USB\",\"adword\": \"引爆红六月，返200京券！相当于2990元！USB支持RMVB格式播放！巨靠谱！赠底座！\",\"martPrice\": \"3599.0000\",\"book\": \"false\",\"jdPrice\": \"3190.00\",\"wareId\": \"337556\",\"imageurl\": \"http://img10.360buyimg.com/n4/815/cb5892ad-e8bc-4fea-8fed-13bfca25909e.jpg\",\"endTime\": "
+					// + (System.currentTimeMillis() + 1 * 30 * 1000) +
+					// "},{\"wname\": \"ARM Cortex-M3应用开发实例详解\",\"adword\": \"\",\"martPrice\": \"59.0000\",\"book\": \"false\",\"jdPrice\": \"35.40\",\"wareId\": \"10484004\",\"imageurl\": \"http://img10.360buyimg.com/n4/18482/e715e570-038f-4e9c-b730-cef17cd40582.jpg\",\"endTime\": "
+					// + (System.currentTimeMillis() + 2 * 60 * 1000)
+					// +
+					// "},{\"wname\": \"飞利浦（Philips）HP8200 均衡呵护系列电吹风 粉红+白色  57°C恒温护发  热量均衡设计 冷风定型 1600瓦\",\"adword\": \"1600 瓦打造靓丽造型，热量均衡保护秀发\",\"martPrice\": \"189.0000\",\"book\": \"false\",\"jdPrice\": \"108.00\",\"wareId\": \"186049\",\"imageurl\": \"http://img10.360buyimg.com/n4/1849/41d836f4-aed5-4da1-b946-2dbafdadad0a.jpg\",\"endTime\": "
+					// + (System.currentTimeMillis() + 3 * 45 * 1000) + "}]}";
+					// httpResponse = new HttpResponse();
+					// httpResponse.setString(jsonstr);
+					// try {
+					// httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+					// } catch (JSONException e) {
+					// e.printStackTrace();
+					// }
+					// if (Log.D) {
+					// Log.d("HttpGroup", "id:" + httpSetting.getId() + "- test json file -->> ");
+					// }
+					// } else if ("productDetail".equals(httpSetting.getFunctionId())) {
+					// String id = null;
+					// try {
+					// id = httpSetting.getJsonParams().getString("wareId");
+					// } catch (JSONException e1) {
+					// }
+					// String json = "{}";
+					// if ("1000717241".equals(id)) {// 绿色0个
+					// json =
+					// "{\"code\": \"0\",\"imagePaths\": [],\"productInfo\": {\"adword\": \"\",\"color\": \"绿色\",\"directShow\": \"false\",\"imgUrlN1\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"imgUrlN5\": \"http://img10.360buyimg.com/n5/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"imgurl\": \"5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"isbook\": \"false\",\"jdPrice\": \"109.00\",\"marketPrice\": \"109.0000\",\"promotion\": \"false\",\"size\": \"XL\",\"wareId\": \"1000717241\",\"wname\": \"唐狮Tonlion男士圆领套头卫衣111111031003 绿色 XL\"}}";
+					// } else if ("1000717245".equals(id)) {// 红色1个
+					// json =
+					// "{\"code\": \"0\",\"imagePaths\": [{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717245}],\"productInfo\": {\"adword\": \"\",\"color\": \"绿色\",\"directShow\": \"false\",\"imgUrlN1\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"imgUrlN5\": \"http://img10.360buyimg.com/n5/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"imgurl\": \"5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"isbook\": \"false\",\"jdPrice\": \"109.00\",\"marketPrice\": \"109.0000\",\"promotion\": \"false\",\"size\": \"XL\",\"wareId\": \"1000717245\",\"wname\": \"唐狮Tonlion男士圆领套头卫衣111111031003 绿色 XL\"}}";
+					// } else if ("1000717267".equals(id)) {// 蓝色2个
+					// json =
+					// "{\"code\": \"0\",\"imagePaths\": [{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241},{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241}],\"productInfo\": {\"adword\": \"\",\"color\": \"绿色\",\"directShow\": \"false\",\"imgUrlN1\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"imgUrlN5\": \"http://img10.360buyimg.com/n5/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"imgurl\": \"5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"isbook\": \"false\",\"jdPrice\": \"109.00\",\"marketPrice\": \"109.0000\",\"promotion\": \"false\",\"size\": \"XL\",\"wareId\": \"1000717267\",\"wname\": \"唐狮Tonlion男士圆领套头卫衣111111031003 绿色 XL\"}}";
+					// } else if ("1000717257".equals(id)) {// 白色3个
+					// json =
+					// "{\"code\": \"0\",\"imagePaths\": [{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241},{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241},{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241}],\"productInfo\": {\"adword\": \"\",\"color\": \"绿色\",\"directShow\": \"false\",\"imgUrlN1\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"imgUrlN5\": \"http://img10.360buyimg.com/n5/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"imgurl\": \"5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"isbook\": \"false\",\"jdPrice\": \"109.00\",\"marketPrice\": \"109.0000\",\"promotion\": \"false\",\"size\": \"XL\",\"wareId\": \"1000717257\",\"wname\": \"唐狮Tonlion男士圆领套头卫衣111111031003 绿色 XL\"}}";
+					// } else if ("1000717196".equals(id)) {// 黑色10个
+					// json =
+					// "{\"code\": \"0\",\"imagePaths\": [{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241},{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241},{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241},{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241},{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241},{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241},{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241},{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241},{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241},{\"bigpath\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"newpath\": \"http://img10.360buyimg.com/n4/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"wareId\": 1000717241}],\"productInfo\": {\"adword\": \"\",\"color\": \"绿色\",\"directShow\": \"false\",\"imgUrlN1\": \"http://img10.360buyimg.com/n0/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"imgUrlN5\": \"http://img10.360buyimg.com/n5/5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"imgurl\": \"5933/4e93ab86-f24a-4129-b632-127f5be37ad6.jpg\",\"isbook\": \"false\",\"jdPrice\": \"109.00\",\"marketPrice\": \"109.0000\",\"promotion\": \"false\",\"size\": \"XL\",\"wareId\": \"1000717196\",\"wname\": \"唐狮Tonlion男士圆领套头卫衣111111031003 绿色 XL\"}}";
+					// }
+					// httpResponse = new HttpResponse();
+					// httpResponse.setString(json);
+					// try {
+					// httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+					// } catch (JSONException e) {
+					// e.printStackTrace();
+					// }
+					// }
+
+					// if("showSecurityPayBlock4Client".equals(httpSetting.getFunctionId())){
+					// String jsonstr =
+					// "{\"securityPayBlocks\":[{\"title\":\"请输入您的支付密码：\",\"submitKey\":\"securityPayPassword\"},{\"title\":\"请输入您的动态密码：\",\"submitKey\":\"securitydongtaiPassword\"}],\"showSecurityPayBlock\":\"true\",\"code\":\"0\"}";
+					// httpResponse = new HttpResponse();
+					// httpResponse.setString(jsonstr);
+					// try {
+					// httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+					// } catch (JSONException e) {
+					// e.printStackTrace();
+					// }
+					// }
+					else {
+						// 没有合适的映射
+						nextHandler();
+					}
+
+				} else {
+
+					// 并非测试模式
+					nextHandler();
+
+				}
+			}
+		};
+
+		/**
+		 * 缓存
+		 */
+		private Handler cacheHandler = new Handler() {
+			@Override
+			public void run() {
+
+				File cachesFile = null;
+				// 内存缓存
+				// JSONObjectProxy cachesJsonObject = null;
+				// if (httpSetting.isLocalMemoryCache() && null !=
+				// (cachesJsonObject = JsonCache.get(httpSetting.getMd5()))) {//
+				// 内存缓存
+				// httpResponse = new HttpResponse();
+				// httpResponse.setJsonObject(cachesJsonObject);
+				// } else
+				if (httpSetting.getCacheMode() != HttpSetting.CACHE_MODE_ONLY_NET && httpSetting.isLocalFileCache() && null != (cachesFile = findCachesFileByMd5())) {// 如果有缓存文件就走缓存
+
+					long localFileCacheTime = httpSetting.getLocalFileCacheTime();
+
+					if (localFileCacheTime != 0 && CacheFileTable.isExpired(cachesFile)) {// 超出有效期
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- local file cache time out -->> ");
+						}
+						doNetAndCache();
+						return;
+					}
+
+					httpResponse = new HttpResponse();
+
+					switch (httpSetting.getType()) {
+
+					case HttpGroupSetting.TYPE_JSON: {// JSON
+
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- read json file -->> ");
+						}
+						FileInputStream inputStream = null;
+						try {
+							inputStream = new FileInputStream(cachesFile);
+							httpResponse.setString(IOUtil.readAsString(inputStream, charset));
+							httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+						} catch (Exception e) {
+							e.printStackTrace();
+							cachesFile.delete();
+							httpResponse = null;
+							doNetAndCache();
+						} finally {
+							if (null != inputStream) {
+								try {
+									inputStream.close();
+								} catch (Exception e) {
+								}
+							}
+						}
+
+						break;
+					}
+
+					case HttpGroupSetting.TYPE_IMAGE: {// IMAGE
+
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- read image file -->> ");
+						}
+						try {
+							httpResponse.setLength(cachesFile.length());
+							
+							httpResponse.setSaveFile(cachesFile);// 图片需要保存File对象，用于取图片存储目录
+
+							if (httpSetting.isNeedShareImage()) {// 需要将缓存图片存成共享
+								final String shareImagePath = FileService.saveShareImage(cachesFile);
+								httpResponse.setShareImagePath(shareImagePath);
+							}
+						} catch (Throwable e) {
+							cachesFile.delete();
+							httpResponse = null;
+							doNetAndCache();
+						}
+
+						break;
+					}
+
+					}
+
+				} else {
+					doNetAndCache();
+				}
+			}
+		};
+
+		/**
+		 * 通知需要访问网络
+		 */
+		private void doNetAndCache() {
+
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- doNetAndCache() -->> ");
+			}
+
+			// 如果要求只依靠缓存，那么直接走onError。
+			if (HttpSetting.CACHE_MODE_ONLY_CACHE == httpSetting.getCacheMode()) {
+				HttpError httpError = new HttpError(new Exception(HttpError.EXCEPTION_MESSAGE_NO_CACHE));
+				httpError.setNoRetry(true);
+				throwError(httpError);
+				return;
+			}
+			
+			// 如果还要求打包模式，那么尝试从assets中获取。
+			if (HttpSetting.CACHE_MODE_ASSETS == httpSetting.getCacheMode() && readAssetsCache()) {
+				return;
+			}
+
+			isNeedConnection = true;// 需要进入到线程池中网络取数据
+
+			if (Log.I) {
+				Log.i("HttpGroup", "id:" + httpSetting.getId() + "- onStart -->> ");
+			}
+
+			// 开始访问网络了，真正开始了，才打开遮罩
+			httpSetting.onStart();// 通知开始（遮罩要在）
+		}
+	
+		/**
+		 * 读取打包缓存数据
+		 * @return
+		 */
+		private boolean readAssetsCache() {
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- readAssetsCache -->> ");
+			}
+			httpResponse = new HttpResponse();
+
+			switch (httpSetting.getType()) {
+
+			case HttpGroupSetting.TYPE_JSON: {// JSON
+
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- readAssetsCache read json file -->> ");
+				}
+
+				final InputStream assetsInput = AssetsCacheUtils.open(httpSetting.getMd5(), FileService.CACHE_EXT_NAME_JSON);
+
+				if (null != assetsInput) {
+					try {
+						httpResponse.setString(IOUtil.readAsString(assetsInput, charset));
+						httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+						return true;
+					} catch (Exception e) {
+						if (Log.E) {
+							Log.e("HttpGroup", "id:" + httpSetting.getId() + "- readAssetsCache read json file error -->> " + e.getMessage());
+						}
+						e.printStackTrace();
+						httpResponse = null;
+					}
+				}
+				break;
+			}
+
+			case HttpGroupSetting.TYPE_IMAGE: {// IMAGE
+
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- readAssetsCache read image file -->> ");
+				}
+				final InputStream assetsInput = AssetsCacheUtils.open(httpSetting.getMd5(), FileService.CACHE_EXT_NAME_IMAGE);
+				if (null != assetsInput) {
+					try {
+						final byte[] assetsBytes = IOUtil.readAsBytes(assetsInput, null);
+						httpResponse.setLength(assetsBytes.length);
+						httpResponse.setInputData(assetsBytes);
+						return true;
+					} catch (Throwable e) {
+						if (Log.E) {
+							Log.e("HttpGroup", "id:" + httpSetting.getId() + "- readAssetsCache read image file error -->> " + e.getMessage());
+						}
+						e.printStackTrace();
+						httpResponse = null;
+					}
+				}
+
+				break;
+			}
+			}
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- readAssetsCache -->> not fond");
+			}
+			return false;
+		}
+
+		/**
+		 * 保存
+		 */
+		private void saveCache() {
+			if (isLastError()) {
+				return;
+			}
+
+			// 存储
+			if (httpSetting.isLocalFileCache()) {
+				switch (httpSetting.getType()) {
+
+				case HttpGroupSetting.TYPE_JSON: {// JSON
+
+					if (Log.D) {
+						Log.d("HttpGroup", "id:" + httpSetting.getId() + "- save json file start -->> ");
+					}
+					Directory directory = FileService.getDirectory(FileService.JSON_DIR);
+					if (null != directory) {
+						String fileName = httpSetting.getMd5() + FileService.CACHE_EXT_NAME_JSON;
+						if (null == httpResponse) {
+							return;
+						}
+						String fileContent = httpResponse.getString();
+						boolean result = FileService.saveToSDCardWithType(directory, fileName, fileContent, FileService.JSON_DIR);
+						if (result) {
+							CacheFile cacheFile = new CacheFile(fileName, httpSetting.getLocalFileCacheTime());
+							cacheFile.setDirectory(directory);
+							CacheFileTable.insertOrUpdate(cacheFile);
+						}
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- save json file -->> " + result);
+						}
+					}
+					break;
+				}
+
+				case HttpGroupSetting.TYPE_IMAGE: {// IMAGE
+
+					if (Log.D) {
+						Log.d("HttpGroup", "id:" + httpSetting.getId() + "- save image file start -->> ");
+					}
+					Directory directory = FileService.getDirectory(FileService.IMAGE_DIR);
+					if (null != directory) {
+						String fileName = httpSetting.getMd5() + FileService.CACHE_EXT_NAME_IMAGE;
+						if (null == httpResponse) {
+							return;
+						}
+						byte[] fileContent = httpResponse.getInputData();
+						boolean result = FileService.saveToSDCardWithType(directory, fileName, fileContent, FileService.IMAGE_DIR);
+						if (result) {
+							CacheFile cacheFile = new CacheFile(fileName, httpSetting.getLocalFileCacheTime());
+							cacheFile.setDirectory(directory);
+							CacheFileTable.insertOrUpdate(cacheFile);
+							httpResponse.setSaveFile(cacheFile.getFile());// 图片需要保存File对象，用于取图片存储目录
+
+							if (httpSetting.isNeedShareImage()) {// 需要将缓存图片存成共享
+								final String shareImagePath = FileService.saveShareImage(cacheFile.getFile());
+								httpResponse.setShareImagePath(shareImagePath);
+							}
+						}
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- save image file -->> " + result);
+						}
+					}
+					break;
+				}
+
+				}
+			}
+		}
+
+		/**
+		 * 进入线程池的第一个handler
+		 */
+		private Handler connectionThreadPoolsHandler = new Handler() {
+
+			@Override
+			public void run() {
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- connectionThreadPoolsHandler -->> ");
+				}
+
+				isNeedConnection = false;// 已进入到线程池，还原为false
+
+				nextHandler();
+
+				saveCache();// 保存缓存文件
+
+				callBack();// 回调
+			}
+
+		};
+
+		private void rsaEncrypt() {
+
+			String functionId = httpSetting.getFunctionId();
+			String body = httpSetting.getJsonParams().toString();
+			
+			if(null == functionId){
+				return;
+			}
+
+			boolean moduleState = SecureAPI.checkApi(functionId);
+			String encrypted = "false";
+
+			if (httpSetting.getNeedAgainEncrypt()) {
+				httpSetting.setNeedEncrypt(false);
+				moduleState = !moduleState;
+			}
+			if (Log.D) {
+				Log.d("HttpGroup", "moduleState -->> " + moduleState);
+			}
+			
+			if (moduleState) {
+				try {
+					String trueKey = SecureNetwork.getTrueKey(true);
+					if(null != trueKey){
+						body = DesUtil.encrypt(body, trueKey);
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- encrypt body -->> " + body);
+						}
+						encrypted = "true";
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- ..body -->> " + body);
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- ..encrypted -->> " + encrypted);
+			}
+			httpSetting.putMapParams("body", body);
+			httpSetting.putMapParams("encrypted", encrypted);
+		}
+
+		/**
+		 * 连接
+		 */
+		private Handler connectionHandler = new Handler() {
+
+			@Override
+			public void run() {
+
+				boolean isUseProxy = NetUtils.isProxy;// 获取上次网络是否用代理
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- default global isProxy -->> " + isUseProxy);
+				}
+				for (int i = 0; i < httpSetting.getAttempts();) {// 重试N次
+
+					boolean retry = false;
+
+					try {
+
+						rsaEncrypt();
+						// 加密工作
+						beforeConnection();
+						// 如果存在加密Url就使用它，否则使用普通Url
+						String urlStr = httpSetting.getFinalUrl();
+						if (null == urlStr) {
+							urlStr = httpSetting.getUrl();
+						}
+
+						URL url = new URL(urlStr);
+						// 开始创建连接对象
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- url.openConnection() -->> ");
+						}
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- finalUrl -->> " + url);
+						}
+						// --------------------------start----------------------------//
+						String proxyHost = null;
+						Integer proxyPort = null;
+						if (isUseProxy) {
+							NetType netType = NetUtils.getNetType();
+							proxyHost = netType.getProxyHost();
+							proxyPort = netType.getProxyPort();
+						}
+						if (isUseProxy && null != proxyHost && null != proxyPort) {// 代理方式
+							if (Log.D) {
+								Log.d("HttpGroup", "id:" + httpSetting.getId() + "- proxy -->> " + proxyHost + "," + proxyPort);
+							}
+							conn = (HttpURLConnection) url.openConnection(new java.net.Proxy(java.net.Proxy.Type.HTTP, new InetSocketAddress(proxyHost, proxyPort)));
+						} else {// 直连方式
+							isUseProxy = false;
+							if (Log.D) {
+								Log.d("HttpGroup", "id:" + httpSetting.getId() + "- noProxy -->> ");
+							}
+							conn = (HttpURLConnection) url.openConnection();
+						}
+						// ---------------------------end---------------------------//
+						conn.setConnectTimeout(httpSetting.getConnectTimeout());
+						conn.setReadTimeout(httpSetting.getReadTimeout());
+						conn.setUseCaches(useCaches);
+						conn.setRequestProperty("Charset", charset);
+						conn.setRequestProperty("Connection", "Keep-Alive");// 保持长连接
+						conn.setRequestProperty("Accept-Encoding", "gzip,deflate");// 客户端支持gzip
+
+						if (httpSetting.isUseCookies()) {
+							if (Log.D) {
+								Log.d("HttpGroup", "id:" + httpSetting.getId() + "- cookies set -->> use cookies");
+							}
+							if (!TextUtils.isEmpty(cookies)) {
+								if (Log.D) {
+									Log.d("HttpGroup", "id:" + httpSetting.getId() + "- cookies set -->> " + cookies);
+								}
+								// 持久化
+								if (LoginUser.hasLogin()) {
+									SafetyManager.saveCookies(cookies);
+								}
+								conn.setRequestProperty("Cookie", cookies);// Cookie
+							} else if (httpSetting.isUseLocalCookies()) {
+								Log.d("HttpGroup", "is useing old local cookies");
+								cookies = SafetyManager.getCookies();
+								if (!TextUtils.isEmpty(cookies)) {
+									if (Log.D) {
+										Log.d("HttpGroup use local cookies ", "id:" + httpSetting.getId() + "- cookies set -->> " + cookies);
+									}
+									conn.setRequestProperty("Cookie", cookies);// Cookie
+								}
+							}
+						}
+
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- handleGetOrPost() -->> ");
+						}
+						handleGetOrPost();
+					} catch (Throwable e) {
+						HttpError httpError = new HttpError(e);
+						throwError(httpError);
+						connectionRetry = true;
+					} finally {
+						if (connectionRetry) {// 连接不成功重试
+							connectionRetry = false;
+							retry = true;
+							// ---------------------------start---------------------------//
+							// 下一次连网方式改变代理或直连
+							isUseProxy = !isUseProxy;
+							if (Log.D) {
+								Log.d("HttpGroup", "id:" + httpSetting.getId() + "- isUseProxy change -->> " + isUseProxy);
+							}
+						} else {// 连接成功，设置优先连网标志
+							if (Log.D) {
+								Log.d("HttpGroup", "id:" + httpSetting.getId() + "- global isProxy change -->> " + isUseProxy);
+							}
+							NetUtils.isProxy = isUseProxy;
+							// ----------------------------end--------------------------//
+						}
+					}
+
+					if (retry) {
+						if (i < httpSetting.getAttempts() - 1) {
+							try {// 隔一段时间再尝试
+								if (Log.D) {
+									Log.d("HttpGroup", "id:" + httpSetting.getId() + "- sleep -->> " + attemptsTime);
+								}
+								Thread.sleep(attemptsTime);
+							} catch (InterruptedException e) {
+								e.printStackTrace();
+							}
+						}
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- onRetry -->> " + " manualRetry = " + manualRetry);
+						}
+
+						if (manualRetry) {
+							// 手动尝试
+							manualRetry = false;
+							clearErrorList();
+							i = 0;
+						} else {
+							// 自动尝试，无需操作
+							i++;
+						}
+					} else {
+						break;
+					}
+				}
+			}
+		};
+
+		private void urlParam() {
+
+			if (httpSetting.isPost()) {
+				// POST
+				if (null != this.httpSetting.getMapParams()) {
+
+					if (reportUserInfoFlag) {
+						this.httpSetting.setUrl(this.httpSetting.getUrl() + "?" + "functionId=" + this.httpSetting.getMapParams().get("functionId") + StatisticsReportUtil.getReportString(httpSetting.isNeedGlobalInitialization()));
+					} else {
+						this.httpSetting.setUrl(this.httpSetting.getUrl() + "?" + "functionId=" + this.httpSetting.getMapParams().get("functionId"));
+					}
+
+				}
+			} else {
+				// GET
+
+				String url = mergerUrlAndParams(this.httpSetting.getUrl(), this.httpSetting.getMapParams());
+
+				if (reportUserInfoFlag && httpSetting.getType() == HttpGroupSetting.TYPE_JSON) {
+					this.httpSetting.setUrl(url + StatisticsReportUtil.getReportString(httpSetting.isNeedGlobalInitialization()));
+				} else {
+					this.httpSetting.setUrl(url);
+				}
+
+			}
+
+		}
+
+		private void beforeConnection() {
+			// 判断是否需要指纹
+			if (checkModule(MODULE_STATE_ENCRYPT)) {
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- encrypt -->> ");
+				}
+				if (null == mMd5Key) {
+					queryMd5Key(continueListener);
+
+					// 本线程工作暂停，等待网络线程获取Md5Key。
+					synchronized (HttpRequest.this) {
+						try {
+							if (Log.D) {
+								Log.d("HttpGroup", "id:" + httpSetting.getId() + "- encrypt wait start -->> ");
+							}
+							HttpRequest.this.wait();
+							if (Log.D) {
+								Log.d("HttpGroup", "id:" + httpSetting.getId() + "- encrypt wait end -->> ");
+							}
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+				this.httpSetting.setFinalUrl(httpSetting.getUrl() + "&hash=" + Md5Encrypt.md5(httpSetting.getJsonParams().toString() + mMd5Key));
+			}
+		}
+
+		private void handleGetOrPost() throws Exception {
+			if (httpSetting.isPost()) {
+				post();
+			} else {
+				get();
+			}
+			connectionHandler2();
+		}
+
+		/**
+		 * GET 请求
+		 */
+		private void get() throws Exception {
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- get() -->> ");
+			}
+			httpResponse = new HttpResponse(conn);
+			conn.setRequestMethod("GET");
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- get() -->> ok");
+			}
+		}
+
+		/**
+		 * POST 请求
+		 */
+		private void post() throws Exception {
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- post() -->> ");
+			}
+			httpResponse = new HttpResponse(conn);
+			conn.setRequestMethod("POST");
+			conn.setDoOutput(true);
+			byte[] data = null;
+			if (this.httpSetting.getMapParams() == null) {
+				data = ((String) "body=").getBytes();
+			} else {
+
+				StringBuilder sb = new StringBuilder();
+
+				Map<String, String> mapParams = this.httpSetting.getMapParams();
+				Set<String> keySet = mapParams.keySet();
+				for (Iterator<String> iterator = keySet.iterator(); iterator.hasNext();) {
+					String key = (String) iterator.next();
+					if ("functionId".equals(key)) {
+						continue;
+					}
+					String value = mapParams.get(key);
+					if (Log.I) {
+						Log.i("HttpGroup", "id:" + httpSetting.getId() + "- param key and value -->> " + key + "：" + value);
+					}
+					sb.append(key).append("=").append(value);
+					if (iterator.hasNext()) {
+						sb.append("&");
+					}
+				}
+
+				data = sb.toString().getBytes();
+
+			}
+			conn.setRequestProperty("Content-Length", String.valueOf(data.length));
+			conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- post() -->> 1");
+			}
+			DataOutputStream outStream = new DataOutputStream(conn.getOutputStream());
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- post() -->> 2");
+			}
+			outStream.write(data);
+			/*
+			 * conn.setRequestProperty("Content-Length", String.valueOf(data.length)); conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded"); DataOutputStream outStream = new
+			 * DataOutputStream(conn.getOutputStream()); outStream.write(data); outStream.flush();
+			 */
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- post() -->> ready");
+			}
+			outStream.flush();
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- post() -->> ok");
+			}
+		}
+
+		/**
+		 * 
+		 */
+		protected void connectionHandler2() {
+			try {
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- connectionHandler2() -->> ");
+				}
+				conn.connect();
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- ResponseCode() -->> ");
+				}
+				// 保存头字段
+				httpResponse.setHeaderFields(conn.getHeaderFields());
+				// 打印所有头字段
+				if (Log.D) {
+					try {
+						Map<String, List<String>> headerFields = conn.getHeaderFields();// TODO:headerFields有可能为null
+						Set<Entry<String, List<String>>> entrySet = headerFields.entrySet();
+						JSONObject jsonObject = new JSONObject();
+						for (Entry<String, List<String>> entry : entrySet) {
+							String name = (null == entry.getKey() ? "<null>" : entry.getKey());
+							String value = new JSONArray(entry.getValue()).toString();
+							jsonObject.put(name, value);
+						}
+						Log.d("HttpGroup", "id:" + httpSetting.getId() + "- headerFields -->> " + jsonObject.toString());
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				httpResponse.setCode(conn.getResponseCode());
+
+				// 长度
+				httpResponse.setLength(conn.getContentLength());
+				HttpGroup.this.addMaxProgress(Long.valueOf(httpResponse.getLength()).intValue());// 更新组进度上限
+				// 类型
+				httpResponse.setType(conn.getContentType());
+
+				// if (httpSetting.getType() == HttpGroupSetting.TYPE_JSON) {
+				// // 头字段所示类型与期望不符时作以下处理：
+				// if (null == httpResponse.getType() || !httpResponse.getType().contains("application/json")) {
+				// // 认证WIFI判断
+				// String customHeaderField = httpResponse.getHeaderField("X_Power_By");
+				// if (null == customHeaderField || !customHeaderField.equals("gw.360buy.com")) {
+				// Exception e = new Exception(HttpError.EXCEPTION_MESSAGE_ATTESTATION_WIFI);
+				// throwError(e);
+				// connectionRetry = true;// 重试
+				// return;
+				// }
+				// }
+				// }
+
+				if (httpResponse.getCode() != HttpURLConnection.HTTP_OK) {
+					HttpError error = new HttpError();
+					error.setErrorCode(HttpError.RESPONSE_CODE);
+					error.setResponseCode(httpResponse.getCode());
+					throwError(error);
+					connectionRetry = true;// 重试
+					return;
+				}
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- ResponseCode() -->> ok");
+				}
+				if(httpSetting.isUseCookies()){
+					// 保存或更新Cookies
+					String cookie = conn.getHeaderField("Set-Cookie");
+					if (null != cookie) {
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "- cookies get -->> " + cookie);
+						}
+						cookies = cookie.substring(0, cookie.indexOf(";"));
+					}
+				}
+				// 输入流
+				InputStream is = null;
+				// 支持gzip
+				String encoding = conn.getHeaderField("Content-Encoding");
+				if ("gzip".equals(encoding)) {
+					is = new GZIPInputStream(conn.getInputStream());
+				} else {
+					is = conn.getInputStream();
+				}
+				httpResponse.setInputStream(is);
+				// try 为了保证释放 InputStream
+				try {
+					// 下一步
+					if (Log.D) {
+						Log.d("HttpGroup", "id:" + httpSetting.getId() + "- ResponseCode() -->> ok nextHandler()");
+					}
+					nextHandler();
+				} finally {
+					try {
+						if (null != httpResponse.getInputStream()) {
+							httpResponse.getInputStream().close();
+							httpResponse.setInputStream(null);// 去掉这个唯一的
+							// InputStream
+							// 持有
+						}
+						if (null != conn) {
+							conn.disconnect();
+							conn = null;
+							// HttpResponse 里的 conn 暂时留着，用于方便事后排错或查询里面设定的属性 TODO
+						}
+					} catch (Exception e) {
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+				if (e instanceof SocketTimeoutException) {// 连接超时
+					HttpError error = new HttpError();
+					error.setErrorCode(HttpError.TIME_OUT);
+					throwError(error);
+				} else if (e.getMessage() != null && e.getMessage().startsWith(CONNECTION_RESET_BY_PEER)) {// 网络被重置问题，不做任何记录，直接重试
+					httpSetting.appendOneAttempts();// 重试次数加1
+					if (Log.D) {
+						Log.d("HttpGroup", "id:" + httpSetting.getId() + "- connectionHandler2() -->> Connection reset by peer");
+					}
+				} else {// 其它
+					HttpError httpError = new HttpError(e);
+					throwError(httpError);
+				}
+				connectionRetry = true;// 重试
+				return;
+			}
+		}
+
+		/**
+		 * 派发内容处理
+		 */
+		private Handler contentHandler = new Handler() {
+			@Override
+			public void run() {
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- contentHandler -->>");
+					Log.d("HttpGroup", "httpSetting.getType()==:" + httpSetting.getType());
+				}
+				try {
+					if (httpSetting.getType() == HttpGroupSetting.TYPE_JSON) {
+						jsonContent();
+					} else if (httpSetting.getType() == HttpGroupSetting.TYPE_IMAGE) {
+						imageContent();
+					} else if (httpSetting.getType() == HttpGroupSetting.TYPE_FILE) {
+						fileContent();
+					}
+					httpResponse.clean();
+				} catch (Exception e) {
+					HttpError httpError = new HttpError(e);
+					throwError(httpError);
+					connectionRetry = true;// 重试
+					return;
+				}
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- contentHandler -->> ok");
+				}
+			}
+		};
+
+		// 读取进度监听器
+		private IOUtil.ProgressListener ioProgressListener = new IOUtil.ProgressListener() {
+			@Override
+			public void notify(int incremental, int cumulant) {
+				addProgress(incremental);// 组进度
+				httpSetting.onProgress(Long.valueOf(httpResponse.getLength()).intValue(), cumulant);// 请求进度
+			}
+		};
+
+		// 连接完毕继续监听器
+		private HttpGroup.CompleteListener continueListener = new HttpGroup.CompleteListener() {
+			@Override
+			public void onComplete(Bundle bundle) {
+				synchronized (HttpRequest.this) {
+					HttpRequest.this.notify();
+				}
+			}
+		};
+
+		/**
+		 * json 内容处理
+		 */
+		private void jsonContent() throws Exception {
+			// 头字段所示类型与期望不符时作以下处理：
+			if (null == httpResponse.getType() || !httpResponse.getType().contains("application/json")) {
+				HttpError error = new HttpError();
+				error.setErrorCode(HttpError.RESPONSE_CODE);
+				error.setResponseCode(404);
+				throwError(error);
+				connectionRetry = true;// 重试
+				return;
+			}
+
+			// 走网络
+			// add by hanxudong
+			handlerJsonData();
+
+			try {
+				// add by hanxudong
+				JSONObjectProxy jsProxy = new JSONObjectProxy(new JSONObject(httpResponse.getString()));
+				httpResponse.setJsonObject(jsProxy);
+				// httpResponse.setJsonObject(new JSONObjectProxy(new JSONObject(httpResponse.getString())));
+			} catch (JSONException e) {// 根本不是 json 格式
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- Can not format json -->> ", e);
+				}
+				HttpError httpError = new HttpError(e);
+				throwError(httpError);
+				connectionRetry = true;// 重试
+				return;
+			}
+			Integer jsonCode = null;
+			try {
+				jsonCode = Integer.valueOf(httpResponse.getJSONObject().getString("code"));
+			} catch (NumberFormatException e) {// jsonCode 数字格式错误
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- Can not format jsonCode -->> ", e);
+				}
+				HttpError httpError = new HttpError(e);
+				throwError(httpError);
+				connectionRetry = true;
+				return;
+			} catch (JSONException e) {// jsonCode 不存在错误
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- not find jsonCode -->> ", e);
+				}
+				HttpError httpError = new HttpError(e);
+				throwError(httpError);
+				connectionRetry = true;// 重试
+				return;
+			}
+			if (null != jsonCode && jsonCode != 0) {// jsonCode
+				// 分支：指纹
+				if (jsonCode.equals(9)) {
+					queryMd5Key(continueListener);
+
+					// 本线程工作暂停，等待网络线程获取Md5Key。
+					synchronized (HttpRequest.this) {
+						try {
+							if (Log.D) {
+								Log.d("HttpGroup", "id:" + httpSetting.getId() + "- encrypt wait start -->> " + httpSetting.getUrl());
+							}
+							HttpRequest.this.wait();
+							if (Log.D) {
+								Log.d("HttpGroup", "id:" + httpSetting.getId() + "- encrypt wait end -->> " + httpSetting.getUrl());
+							}
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+
+					// 重试开头就会重新加密了
+					connectionRetry = true;// 重试
+					return;
+				}
+
+				// 分支：指纹
+				if (jsonCode.equals(10)) {
+
+					// 标记为需要加密
+					setModule(MODULE_STATE_ENCRYPT);
+
+					// 重试开头就会重新加密了
+					connectionRetry = true;// 重试
+					return;
+				}
+
+				if (jsonCode == -1 || // 属于出错并可重试的jsonCode
+						jsonCode == -2) {
+					// 其它不正确错误
+					HttpError error = new HttpError();
+					error.setErrorCode(HttpError.JSON_CODE);
+					error.setJsonCode(jsonCode);
+					error.setHttpResponse(httpResponse);
+					throwError(error);
+					connectionRetry = true;// 重试
+					return;
+				}
+
+				if (jsonCode == 30 || jsonCode == 1 || jsonCode == 2) {
+					// 其它不正确错误
+					HttpError error = new HttpError();
+					error.setErrorCode(HttpError.JSON_CODE);
+					error.setJsonCode(jsonCode);
+					error.setHttpResponse(httpResponse);
+					error.setNoRetry(true);
+					throwError(error);
+					// connectionRetry = true;// 不重试
+					return;
+				}
+
+			}
+		}
+
+		/**
+		 * image 内容处理
+		 */
+		private void imageContent() throws Exception {
+			// 头字段所示类型与期望不符时作以下处理：
+			if (null == httpResponse.getType() || !httpResponse.getType().contains("image/")) {
+				HttpError error = new HttpError();
+				error.setErrorCode(HttpError.RESPONSE_CODE);
+				error.setResponseCode(404);
+				throwError(error);
+				connectionRetry = true;// 重试
+				return;
+			}
+			// 走网络
+			try {
+				httpResponse.setInputData(IOUtil.readAsBytes(httpResponse.getInputStream(), ioProgressListener));
+			} catch (Throwable e) {// 读取过程出错
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- image content connection read error -->> ", e);
+				}
+				HttpError httpError = new HttpError(e);
+				throwError(httpError);
+				connectionRetry = true;// 重试
+				return;
+			}
+			// 走缓存
+		}
+
+		/**
+		 * file 内容处理
+		 */
+		private void fileContent() {
+			// 所示类型与期望不符时作以下处理：
+			// 管它是什么东西都尝试写到文件里面去
+			try {
+				FileGuider savePath = httpSetting.getSavePath();
+
+				if (null != savePath) {
+					// 确定保存路径
+				}
+
+				// TODO 应该判断如果 savePath 为 null
+				// TODO 可以而提供绝对路径，也可以提供相对路径，应该有多种方式。
+				savePath.setAvailableSize(httpResponse.getLength());// 所需空间大小
+				FileOutputStream fileOutputStream = FileService.openFileOutput(savePath);
+				IOUtil.readAsFile(httpResponse.getInputStream(), fileOutputStream, ioProgressListener, this);
+
+				File dir = MyApplication.getInstance().getFilesDir();
+				File apkFilePath = new File(dir, savePath.getFileName());
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- download() apkFilePath -->> " + apkFilePath);
+				}
+				if (isStop()) {
+					apkFilePath.delete();
+				}
+				httpResponse.setSaveFile(apkFilePath);
+			} catch (Exception e) {// 读取过程出错
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- file content connection read error -->> ", e);
+				}
+				HttpError httpError = new HttpError(e);
+				throwError(httpError);
+				connectionRetry = true;// 重试
+				return;
+			}
+		}
+
+		/**
+		 * 类型定位
+		 */
+		public void typeHandler() {
+			nextHandler();
+		}
+
+		// add by hanxudong
+
+		/**
+		 * @Title: handlerJosnData
+		 * @Description: 取得JSON中的数据，判断数据是否有加密，如果有加密将进行解密操作
+		 * @param
+		 * @return void
+		 * @throws
+		 */
+		private void handlerJsonData() {
+			if (Log.D) {
+				Log.d("HttpGroup", "id:" + httpSetting.getId() + "- HttpGroup handlerJsonData -->> ");
+
+			}
+			try {
+				// add by hanxudong
+				InputStream is = httpResponse.getInputStream();
+				String inputStreamString = IOUtil.readAsString(is, charset, ioProgressListener);
+				// JSONObjectProxy jsonObject = new JSONObjectProxy(new JSONObject(inputStreamString));
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "-httpGroup inputStreamString -->> " + inputStreamString);
+				}
+				// JSONObjectProxy jsonObject = new JSONObjectProxy(new JSONObject(inputStreamString));
+				// if(Log.D){
+				// Log.d("HttpGroup", "httpGroup inputStreamString -->> " + inputStreamString);
+				// }
+				// String codeString = jsonObject.getStringOrNull("code");
+				// Log.d("HttpGroup", "codeString -->> " + codeString);
+				// if(codeString != null && "6".equals(codeString)){
+				// String desContent = jsonObject.getStringOrNull("des");
+				// String encContent = DesUtil.decrypt(desContent, HttpNetWork.getInstance().getTrueKey(), "utf-8");
+				// if(Log.D){
+				// Log.d("HttpGroup", "encContent -->> " + encContent);
+				// }
+				// }
+				// 通讯解密后JSON
+				JSONObjectProxy jsonObject = getResponseJson(inputStreamString);
+				if (null == jsonObject) {
+					return;
+				}
+				// 读取加密的内容
+				String encryptContent = jsonObject.getStringOrNull("encryptContent");
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "-防篡改加密的内容  encryptContent-->> " + encryptContent);
+				}
+				// 服务端返回结果为加密
+				if (null != encryptContent && encryptContent.length() > 0) {
+					Activity myActivity = httpGroupSetting.getMyActivity();
+
+					byte[] encryptContenByte = ContentConvertUtil.toByteArray(encryptContent)/* encryptContent.getBytes("utf8") */;
+					byte[] decodeSrc = BitmapkitUtils.encodeJni(encryptContenByte, true, myActivity);
+					String decodeEncryptContent = null;
+					if (null == decodeSrc) {
+						// popup dialog
+						alertSignatureFailedDialog();
+					} else {
+						decodeEncryptContent = new String(decodeSrc, "UTF-8");
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "-JNI 防篡改 解密内容decodeEncryptContent -->> " + decodeEncryptContent);
+						}
+						httpResponse.setString(decodeEncryptContent);
+					}
+					// 服务端返回结果非加密
+				} else {
+					httpResponse.setString(jsonObject.toString());
+				}
+
+				if (Log.I) {
+					Log.i("HttpGroup", "id:" + httpSetting.getId() + "- response string -->> " + httpResponse.getString());
+				}
+			} catch (Exception e) {// 读取过程出错
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "- json content connection read error -->> ", e);
+				}
+				HttpError httpError = new HttpError(e);
+				throwError(httpError);
+				connectionRetry = true;// 重试
+				return;
+			} catch (UnsatisfiedLinkError e) {
+				// BitmapkitUtils.alertLoadlibFailedDialog();
+			}
+		}
+
+		/**
+		 * @Title: getResponseJson
+		 * @Description: 获取解密后的下发数据
+		 * @param @param inputStreamString
+		 * @param @return
+		 * @return JSONObjectProxy
+		 * @throws
+		 */
+		private JSONObjectProxy getResponseJson(String inputStreamString) {
+			JSONObjectProxy responseJsonObject = null;
+			try {
+				responseJsonObject = new JSONObjectProxy(new JSONObject(inputStreamString));
+				String codeString = responseJsonObject.getStringOrNull("code");
+
+				if (Log.D) {
+					Log.d("HttpGroup", "id:" + httpSetting.getId() + "-codeString -->> " + codeString);
+				}
+
+				if (codeString != null && codeString.length() > 0) {
+					String encContent = "";
+
+					if ("6".equals(codeString)) {
+						String desContent = responseJsonObject.getStringOrNull("des");
+						if (Log.D) {
+							Log.d("HttpGroup", "id:" + httpSetting.getId() + "-通讯加密 desContent -->> " + desContent);
+						}
+						if (null != desContent) {
+							String trueKey = SecureNetwork.getTrueKey(true);
+							if(null != trueKey){
+								encContent = DesUtil.decrypt(desContent, trueKey, "utf-8");
+								if (Log.D) {
+									Log.d("HttpGroup", "id:" + httpSetting.getId() + "-通讯解密 encContent -->> " + encContent);
+								}
+								responseJsonObject = new JSONObjectProxy(new JSONObject(encContent));
+							}
+						} else {
+							// 加密内容为null时、对应处理
+							return null;
+						}
+					} else {
+						if ("8".equals(codeString) || "11".equals(codeString) || "7".equals(codeString)) {// 8:缺少sessionKey 11:解密请求信息失败
+							SecureNetwork.doPreparation(true, true);
+							rsaConnectionRetry();
+							return null;
+						} else if ("12".equals(codeString)) {// 服务端配置变更
+							httpSetting.setNeedEncrypt(true);
+							rsaConnectionRetry();
+							return null;
+						}
+					}
+				}
+			} catch (JSONException e) {
+				e.printStackTrace();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			return responseJsonObject;
+		}
+
+		private void rsaConnectionRetry() {
+			HttpError httpError = new HttpError(new Exception(HttpError.EXCEPTION_MESSAGE_ATTESTATION_RSA));
+			httpError.setNoRetry(true);
+			throwError(httpError);
+			connectionRetry = true;// 重试
+		}
+
+		protected static final int MODULE_STATE_DISABLE = 0;// 禁用
+		protected static final int MODULE_STATE_ENCRYPT = 3;// 加密
+
+		/**
+		 * 检查状态
+		 */
+		protected boolean checkModule(int state) {
+			if (null != httpSetting.getFunctionId() && //
+					null != mModules) {
+				Integer state_ = mModules.getIntOrNull(httpSetting.getFunctionId());
+				if (null != state_ && state == state_) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/**
+		 * 设置状态
+		 */
+		protected void setModule(int state) {
+			if (null != httpSetting.getFunctionId() && //
+					null != mModules) {
+				try {
+					mModules.put(httpSetting.getFunctionId(), state);
+				} catch (JSONException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
+	}
+
+	/**
+	 * 响应封装类
+	 */
+	public class HttpResponse {
+
+		private InputStream inputStream;
+		private byte[] inputData;
+		private SoftReference<byte[]> softReferenceInputData;
+		private File saveFile;
+		private String string;
+		private JSONObjectProxy jsonObject;
+		private HttpURLConnection httpURLConnection;
+		private Map<String, List<String>> headerFields;
+
+		private int code;// 响应码
+		private long length;// 数据量
+		private String type;// 媒体类型
+		private String shareImagePath;// 共享图片路径名
+
+		// 内存回收
+		private void gc() {
+			softReferenceInputData = new SoftReference<byte[]>(inputData);
+			inputData = null;
+		}
+
+		/**
+		 * 当直接从缓存中取得数据而无需网络连接时，可能会使用此构造函数
+		 */
+		public HttpResponse() {
+		}
+
+		public HttpResponse(HttpURLConnection httpConnection) {
+			this.httpURLConnection = httpConnection;
+		}
+
+		public void clean() {
+			this.httpURLConnection = null;
+		}
+
+		public void setInputStream(InputStream inputStream) {
+			this.inputStream = inputStream;
+		}
+
+		public InputStream getInputStream() {
+			return inputStream;
+		}
+
+		public void setJsonObject(JSONObjectProxy jsonObject) {
+			this.jsonObject = jsonObject;
+		}
+
+		public JSONObjectProxy getJSONObject() {
+			return jsonObject;
+		}
+
+		public String getString() {
+			return string;
+		}
+
+		public void setString(String string) {
+			this.string = string;
+		}
+
+		public int getCode() {
+			return code;
+		}
+
+		public void setCode(int code) {
+			this.code = code;
+		}
+
+		public long getLength() {
+			return length;
+		}
+
+		public void setLength(long length) {
+			this.length = length;
+		}
+
+		public String getType() {
+			return type;
+		}
+
+		public void setType(String type) {
+			this.type = type;
+		}
+
+		public byte[] getInputData() {
+			byte[] iData = inputData;
+			gc();
+			return iData;
+		}
+
+		public void setInputData(byte[] inputData) {
+			this.inputData = inputData;
+		}
+
+		public File getSaveFile() {
+			return saveFile;
+		}
+
+		public void setSaveFile(File saveFile) {
+			this.saveFile = saveFile;
+		}
+
+		public Map<String, List<String>> getHeaderFields() {
+			return headerFields;
+		}
+
+		public void setHeaderFields(Map<String, List<String>> headerFields) {
+			this.headerFields = headerFields;
+		}
+
+		public String getHeaderField(String key) {
+			if (null == headerFields) {
+				return null;
+			}
+			List<String> listStr = headerFields.get(key);
+			if (null == listStr || listStr.size() < 1) {
+				return null;
+			}
+			return listStr.get(0);
+		}
+
+		public void setShareImagePath(String shareImagePath) {
+			this.shareImagePath = shareImagePath;
+		}
+
+		public String getShareImagePath() {
+			return shareImagePath;
+		}
+
+	}
+
+	/* 组的被子调用事件 */
+	protected void onStart() {
+		if (null != onGroupStartListener)
+			onGroupStartListener.onStart();
+	}
+
+	protected void onComplete() {
+		if (null != onGroupCompleteListener)
+			onGroupCompleteListener.onComplete();
+	}
+
+	private int completesCount = 0;
+
+	/**
+	 * httpSetting的onEnd 和 onError 都调用这一个，通知调用方各请求完成
+	 */
+	protected void addCompletesCount() {
+		this.completesCount += 1;
+		if (Log.I) {
+			Log.i("HttpGroup", "addCompletesCount -->> " + this +"completesCount:" + completesCount + ", httpCount:" + httpCount);
+		}
+		if (completesCount == httpCount) {
+			onComplete();
+		}
+	}
+
+	// 为了 progress -->>
+	private void onProgress(int maxProgress, int progress) {
+		if (null != onGroupProgressListener)
+			onGroupProgressListener.onProgress(maxProgress, progress);
+	}
+
+	private int maxProgress = 0;
+	private int progress = 0;
+
+	protected void addMaxProgress(int maxProgress) {// TODO 多线程调用这个方法，这里可能会有线程问题
+		this.maxProgress += maxProgress;
+		onProgress(this.maxProgress, this.progress);
+
+	}
+
+	protected void addProgress(int progress) {// TODO 多线程调用这个方法，这里可能会有线程问题
+		this.progress += progress;
+		onProgress(this.maxProgress, this.progress);
+	}
+
+	// <<-- 为了 progress
+
+	// 为了 step -->>
+	private void onStep(int maxStep, int step) {
+		if (null != onGroupStepListener)
+			onGroupStepListener.onStep(maxStep, step);
+	}
+
+	private int maxStep = 0;
+	private int step = 0;
+
+	protected void addMaxStep(int maxStep) {// TODO 多线程调用这个方法，这里可能会有线程问题
+		this.maxStep += maxStep;
+		onStep(this.maxStep, this.step);
+	}
+
+	protected void addStep(int step) {// TODO 多线程调用这个方法，这里可能会有线程问题
+		this.step += step;
+		onStep(this.maxStep, this.step);
+	}
+
+	// <<-- 为了 step
+
+	/* 组监听器 - 存放 */
+	private OnGroupStartListener onGroupStartListener;
+	private OnGroupCompleteListener onGroupCompleteListener;
+	private OnGroupProgressListener onGroupProgressListener;
+	private OnGroupStepListener onGroupStepListener;
+
+	public void setOnGroupStartListener(OnGroupStartListener onGroupStartListener) {
+		this.onGroupStartListener = onGroupStartListener;
+	}
+
+	public void setOnGroupCompleteListener(OnGroupCompleteListener onGroupCompleteListener) {
+		this.onGroupCompleteListener = onGroupCompleteListener;
+	}
+
+	public void setOnGroupProgressListener(OnGroupProgressListener onGroupProgressListener) {
+		this.onGroupProgressListener = onGroupProgressListener;
+	}
+
+	public void setOnGroupStepListener(OnGroupStepListener onGroupStepListener) {
+		this.onGroupStepListener = onGroupStepListener;
+	}
+
+	/* 组监听器 - 定义 */
+	public interface OnGroupStartListener {
+		void onStart();
+	}
+
+	public interface OnGroupCompleteListener {
+		void onComplete();
+	}
+
+	public interface OnGroupProgressListener {
+		void onProgress(int max, int progress);
+	}
+
+	public interface OnGroupStepListener {
+		void onStep(int max, int step);
+	}
+
+	/* HttpTask监听器 - 定义 */
+	public interface HttpTaskListener {
+
+	}
+
+	public interface OnStartListener extends HttpTaskListener {
+
+		void onStart();
+
+	}
+
+	public interface OnEndListener extends HttpTaskListener {
+
+		void onEnd(HttpResponse httpResponse);
+
+	}
+
+	public interface OnErrorListener extends HttpTaskListener {
+
+		void onError(HttpError error);
+
+	}
+
+	public interface OnReadyListener extends HttpTaskListener {
+
+		void onReady(HttpSettingParams httpSettingParams);
+
+	}
+
+	public interface OnProgressListener extends HttpTaskListener {
+
+		void onProgress(int max, int progress);
+
+	}
+
+	public interface OnCommonListener extends OnEndListener, OnErrorListener, OnReadyListener {
+
+	}
+
+	public interface OnAllListener extends OnStartListener, OnEndListener, OnErrorListener, OnProgressListener {
+
+	}
+
+	public interface CustomOnAllListener extends OnAllListener {
+
+	}
+
+	/**
+	 * 错误信息封装
+	 */
+	public static class HttpError {
+
+		public static final int EXCEPTION = 0;
+		public static final int TIME_OUT = 1;
+		public static final int RESPONSE_CODE = 2;
+		public static final int JSON_CODE = 3;
+
+		public static final String EXCEPTION_MESSAGE_ATTESTATION_WIFI = "attestation WIFI";
+		public static final String EXCEPTION_MESSAGE_NO_CACHE = "no cache";
+		public static final String EXCEPTION_MESSAGE_ATTESTATION_RSA = "attestation RSA";
+		public static final String EXCEPTION_MESSAGE_NO_READY = "no ready";
+
+		/**
+		 * 出错的方向
+		 */
+		private int errorCode;
+
+		/**
+		 * 被捕获的responseCode
+		 */
+		private int responseCode;
+
+		/**
+		 * 被捕获的jsonCode
+		 */
+		private int jsonCode;
+
+		/**
+		 * 备用
+		 */
+		private String message;
+
+		/**
+		 * 被捕获的异常
+		 */
+		private Throwable exception;
+
+		/**
+		 * 第几次尝试
+		 */
+		private int times;
+
+		/**
+		 * 无需重试
+		 */
+		private boolean noRetry;
+
+		private HttpResponse httpResponse;
+
+		public HttpError() {
+
+		}
+
+		public HttpError(Throwable exception) {
+			this.errorCode = EXCEPTION;
+			this.exception = exception;
+		}
+
+		public int getErrorCode() {
+			return errorCode;
+		}
+
+		public String getErrorCodeStr() {
+			switch (errorCode) {
+			case EXCEPTION:
+				return "EXCEPTION";
+			case TIME_OUT:
+				return "TIME_OUT";
+			case RESPONSE_CODE:
+				return "RESPONSE_CODE";
+			case JSON_CODE:
+				return "JSON_CODE";
+			default:
+				return "UNKNOWN";
+			}
+		}
+
+		public void setErrorCode(int errorCode) {
+			this.errorCode = errorCode;
+		}
+
+		public int getResponseCode() {
+			return responseCode;
+		}
+
+		public void setResponseCode(int responseCode) {
+			this.responseCode = responseCode;
+		}
+
+		public int getJsonCode() {
+			return jsonCode;
+		}
+
+		public void setJsonCode(int jsonCode) {
+			this.jsonCode = jsonCode;
+		}
+
+		public String getMessage() {
+			return message;
+		}
+
+		public void setMessage(String message) {
+			this.message = message;
+		}
+
+		public Throwable getException() {
+			return exception;
+		}
+
+		public void setException(Throwable exception) {
+			this.exception = exception;
+		}
+
+		public int getTimes() {
+			return times;
+		}
+
+		public void setTimes(int times) {
+			this.times = times;
+		}
+
+		public HttpResponse getHttpResponse() {
+			return httpResponse;
+		}
+
+		public void setHttpResponse(HttpResponse httpResponse) {
+			this.httpResponse = httpResponse;
+		}
+
+		@Override
+		public String toString() {
+			if (null != getException()) {
+				if (Log.D) {
+					Log.d("HttpGroup", "HttpError Exception -->> ", getException());
+				}
+			}
+			return "HttpError [errorCode=" + getErrorCodeStr() + ", exception=" + exception + ", jsonCode=" + jsonCode + ", message=" + message + ", responseCode=" + responseCode + ", time=" + times + "]";
+		}
+
+		/**
+		 * 是否无需重试
+		 */
+		public boolean isNoRetry() {
+			return noRetry;
+		}
+
+		/**
+		 * 设置是否无需重试
+		 */
+		public void setNoRetry(boolean noRetry) {
+			this.noRetry = noRetry;
+		}
+
+	}
+
+	/**
+	 * Copyright 2011 Jingdong Android Mobile Application
+	 * 
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2011-1-10 下午12:52:06
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 连接组设置封装
+	 */
+	public static class HttpGroupSetting {
+
+		public static final int PRIORITY_FILE = 500;
+		public static final int PRIORITY_JSON = 1000;
+		public static final int PRIORITY_IMAGE = 5000;
+
+		public static final int TYPE_FILE = 500;
+		public static final int TYPE_JSON = 1000;
+		public static final int TYPE_IMAGE = 5000;
+
+		private MyActivity myActivity;
+		private int priority;
+		private int type;
+
+		public MyActivity getMyActivity() {
+			return myActivity;
+		}
+
+		public void setMyActivity(MyActivity myActivity) {
+			this.myActivity = myActivity;
+		}
+
+		public int getPriority() {
+			return priority;
+		}
+
+		public void setPriority(int priority) {
+			this.priority = priority;
+		}
+
+		public int getType() {
+			return type;
+		}
+
+		public void setType(int type) {
+			this.type = type;
+			if (0 == priority) {
+				switch (type) {
+				case TYPE_JSON:
+					setPriority(PRIORITY_JSON);
+					break;
+				case TYPE_IMAGE:
+					setPriority(PRIORITY_IMAGE);
+					break;
+				}
+			}
+		}
+
+	}
+
+	public interface HttpSettingParams {
+
+		void putJsonParam(String key, Object value);
+
+		void putMapParams(String key, String value);
+		
+		void setReady(boolean isReady);
+
+	}
+
+	/**
+	 * Copyright 2010 Jingdong Android Mobile Application
+	 * 
+	 * @author lijingzuo
+	 * 
+	 *         Time: 2010-12-27 下午05:26:55
+	 * 
+	 *         Name:
+	 * 
+	 *         Description: 连接信息封装
+	 */
+	public static class HttpSetting implements HttpSettingParams {
+
+		public static final int EFFECT_NO = 0;// 不要效果
+		public static final int EFFECT_DEFAULT = 1;// 默认效果
+
+		public static final int EFFECT_STATE_NO = 0;
+		public static final int EFFECT_STATE_YES = 1;
+
+		public static final int CACHE_MODE_AUTO = 0;
+		public static final int CACHE_MODE_ONLY_CACHE = 1;
+		public static final int CACHE_MODE_ONLY_NET = 2;
+		public static final int CACHE_MODE_ASSETS = 3;
+		
+		public static final int ERROR_DIALOG_TYPE_DEFAULT = 0;// 默认为0
+		public static final int ERROR_DIALOG_TYPE_ONLY_CANCEL = 1;// 只有取消按钮
+		public static final int ERROR_DIALOG_TYPE_BACK_RETRY = 2;// 返回上一页和重试
+		public static final int ERROR_DIALOG_TYPE_SETUP_CANCEL = 3;// 设置网络和取消
+
+		private int id;
+		private String host;
+		private String functionId;
+		private String url;
+		private String finalUrl;
+		private FileGuider savePath;
+		private JSONObject jsonParams;
+		private Map<String, String> mapParams;
+		private OnStartListener onStartListener;
+		private OnProgressListener onProgressListener;
+		private OnEndListener onEndListener;
+		private OnErrorListener onErrorListener;
+		private OnReadyListener onReadyListener;
+		private int connectTimeout;
+		private int readTimeout;
+		private String md5;
+		private int type;
+		private int priority;// 0:继承
+		private boolean post = "post".equals(Configuration.getProperty(Configuration.REQUEST_METHOD, "post"));
+		private boolean notifyUser = false;
+		private boolean useLocalCookies = false; // 是否使用本地的缓存cookies
+		private boolean isUseCookies = true; // 是否使用cookies传输给服务器
+		private boolean notifyUserWithExit = false;// 仅仅控制了一下文字，退出的逻辑由监听器处理。
+		private boolean localMemoryCache = false;
+		private boolean localFileCache = false;
+		private long localFileCacheTime = CacheTimeConfig.DEFAULT;// 0:永久保存（不允许出现，因为有无限膨胀的危险）
+		private boolean needGlobalInitialization = true;
+		private int effect = EFFECT_DEFAULT;// 0:不要效果,1:默认效果
+		private int effectState = EFFECT_STATE_NO;// 0:未处理,1:已处理
+		private int cacheMode = CACHE_MODE_AUTO;// 缓存模式。0:自动模式（有缓存用缓存，没缓存用网络）,1:只使用缓存,2:只使用网络,3:打包模式(有缓存用缓存，没缓存用打包数据，没打包数据用网络)
+		private int attempts;// 重试次数
+
+		private boolean needShareImage;// 是否将缓存图片存成共享图片
+
+		private boolean isThisFunctionMustBeExcute = false; // 这个请求是否必须被执行，如果没有执行成功（即走了Error），那么将在网络情况重新连接的时候，重新发送这个请求
+		private boolean mNeedAgainEncrypt = false;
+		
+		private boolean isTopPriority = false;// 首要任务，不会放到线程池中执行
+		
+		private boolean isReady = true;// 是否真的准备好要发网络请求
+		
+		private int alertErrorDialogType = ERROR_DIALOG_TYPE_DEFAULT;// 错误时的弹出框类型
+
+		public int getAlertErrorDialogType() {
+			return alertErrorDialogType;
+		}
+		
+		public void setAlertErrorDialogType(int alertErrorDialogType) {
+			this.alertErrorDialogType = alertErrorDialogType;
+		}
+		
+		public boolean isReady() {
+			return isReady;
+		}
+
+		@Override
+		public void setReady(boolean isReady) {
+			this.isReady = isReady;
+		}
+
+		public boolean isThisFunctionMustBeExcute() {
+			return isThisFunctionMustBeExcute;
+		}
+
+		public void setThisFunctionMustBeExcute(boolean isThisFunctionMustBeExcute) {
+			this.isThisFunctionMustBeExcute = isThisFunctionMustBeExcute;
+		}
+
+		public boolean isUseLocalCookies() {
+			return useLocalCookies;
+		}
+
+		public void setUseLocalCookies(boolean useLocalCookies) {
+			this.useLocalCookies = useLocalCookies;
+		}
+		
+		public void setUseCookies(boolean isUseCookies) {
+			this.isUseCookies = isUseCookies;
+		}
+		
+		public boolean isUseCookies() {
+			return isUseCookies;
+		}
+
+		public int getAttempts() {
+			return attempts;
+		}
+
+		// 重试次数追加1次
+		public void appendOneAttempts() {
+			attempts++;
+		}
+
+		public void setAttempts(int attempts) {
+			this.attempts = attempts;
+		}
+
+		public String getFunctionId() {
+			return functionId;
+		}
+
+		public void setFunctionId(String functionId) {
+			this.functionId = functionId;
+		}
+
+		public String getUrl() {
+			return url;
+		}
+
+		public void setUrl(String url) {
+			this.url = url;
+		}
+
+		public String getFinalUrl() {
+			return finalUrl;
+		}
+
+		public void setFinalUrl(String finalUrl) {
+			this.finalUrl = finalUrl;
+		}
+
+		public JSONObject getJsonParams() {
+			if (null == jsonParams) {
+				jsonParams = new JSONObject();
+			}
+			return jsonParams;
+		}
+
+		/**
+		 * 批量添加参数
+		 */
+		@Deprecated
+		public void setJsonParams(JSONObject params) {
+			if (null == params) {
+				return;
+			}
+			try {
+				this.jsonParams = new JSONObject(params.toString());
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
+		}
+
+		public void putJsonParam(String key, Object value) {
+			if (null == this.jsonParams) {
+				this.jsonParams = new JSONObject();
+			}
+			try {
+				this.jsonParams.put(key, value);
+			} catch (JSONException e) {
+				if (Log.D) {
+					Log.d("HttpGroup", "JSONException -->> ", e);
+				}
+			}
+		}
+
+		public Map<String, String> getMapParams() {
+			return mapParams;
+		}
+
+		/**
+		 * 批量添加参数
+		 */
+		@Deprecated
+		public void setMapParams(Map<String, String> mapParams) {
+			if (null == mapParams) {
+				return;
+			}
+			Set<String> keySet = mapParams.keySet();
+			for (String key : keySet) {
+				putMapParams(key, mapParams.get(key));
+			}
+		}
+
+		public void putMapParams(String key, String value) {
+			if (null == this.mapParams) {
+				this.mapParams = new URLParamMap(charset);
+			}
+			this.mapParams.put(key, value);
+		}
+
+		public int getConnectTimeout() {
+			return connectTimeout;
+		}
+
+		public void setConnectTimeout(int connectTimeout) {
+			this.connectTimeout = connectTimeout;
+		}
+
+		public OnStartListener getOnStartListener() {
+			return onStartListener;
+		}
+
+		public OnProgressListener getOnProgressListener() {
+			return onProgressListener;
+		}
+
+		public OnEndListener getOnEndListener() {
+			return onEndListener;
+		}
+
+		public OnErrorListener getOnErrorListener() {
+			return onErrorListener;
+		}
+
+		public OnReadyListener getOnReadyListener() {
+			return onReadyListener;
+		}
+
+		public void setListener(HttpTaskListener httpTaskListener) {
+			if (httpTaskListener instanceof CustomOnAllListener) {
+				setEffect(0);// 没有效果
+			}
+			if (httpTaskListener instanceof DefaultEffectHttpListener) {
+				setEffectState(1);// 已处理
+			}
+			if (httpTaskListener instanceof OnErrorListener) {
+				this.onErrorListener = (OnErrorListener) httpTaskListener;
+			}
+			if (httpTaskListener instanceof OnStartListener) {
+				this.onStartListener = (OnStartListener) httpTaskListener;
+			}
+			if (httpTaskListener instanceof OnProgressListener) {
+				this.onProgressListener = (OnProgressListener) httpTaskListener;
+			}
+			if (httpTaskListener instanceof OnEndListener) {
+				this.onEndListener = (OnEndListener) httpTaskListener;
+			}
+			if (httpTaskListener instanceof OnReadyListener) {
+				this.onReadyListener = (OnReadyListener) httpTaskListener;
+			}
+		}
+
+		public void onStart() {
+			if (null != onStartListener) {
+				onStartListener.onStart();
+			}
+		}
+
+		public void onEnd(HttpResponse httpResponse) {
+			if (null != onEndListener) {
+				//建议这里加入判断
+				/*
+				 * if(httpResponse == null)
+				 * {
+				 * 		onEndListener.onError();
+				 * 	    retrun;
+				 * }
+				 */
+				onEndListener.onEnd(httpResponse);
+			}
+		}
+
+		public void onError(HttpError httpError) {
+			if (null != onErrorListener) {
+				onErrorListener.onError(httpError);
+				if (isThisFunctionMustBeExcute) {
+					UnExcuteFunction function = new UnExcuteFunction();
+					function.setIfNeedNotifyUser(UnExcuteFunction.FALSE);
+					function.setIfNeedLodingModel(UnExcuteFunction.FALSE);
+					function.setCallBack("");
+					function.setFunctionId(getFunctionId());
+					function.setJsonParams(getJsonParams().toString());
+					function.setHost(getHost());
+					function.setMd5(md5);
+					UnExcuteFunctionTable.saveUnExcuteFunction(function);
+				}
+			}
+		}
+
+		public void onProgress(int max, int progress) {
+			if (null != onProgressListener) {
+				onProgressListener.onProgress(max, progress);
+			}
+		}
+
+		public String getMd5() {
+			if (null == md5) {
+				String urlTempStr = getUrl();
+				if (null == urlTempStr) {
+					return null;
+				}
+				int start = 0;
+				for (int i = 0; i < 3; i++) {
+					start = urlTempStr.indexOf("/", start + 1);
+				}
+				if (start == -1) {
+					return null;
+				}
+				String urlPath = getUrl().substring(start);
+				if (isPost()) {
+					md5 = Md5Encrypt.md5(urlPath + getJsonParams());
+				} else {
+					md5 = Md5Encrypt.md5(urlPath);
+				}
+				if (Log.D) {
+					Log.d("HttpGroup", "urlPath -->> " + urlPath + " md5 -->> " + md5);
+				}
+			}
+			return md5;
+		}
+
+		public void setMd5(String md5) {
+			this.md5 = md5;
+		}
+
+		public int getPriority() {
+			return priority;
+		}
+
+		public void setPriority(int priority) {
+			this.priority = priority;
+		}
+
+		public boolean isPost() {
+			return post;
+		}
+
+		public void setPost(boolean post) {
+			this.post = post;
+		}
+
+		public int getReadTimeout() {
+			return readTimeout;
+		}
+
+		public void setReadTimeout(int readTimeout) {
+			this.readTimeout = readTimeout;
+		}
+
+		public boolean isNotifyUser() {
+			return notifyUser;
+		}
+
+		public void setNotifyUser(boolean notifyUser) {
+			this.notifyUser = notifyUser;
+		}
+
+		public boolean isLocalMemoryCache() {
+			return localMemoryCache;
+		}
+
+		public void setLocalMemoryCache(boolean localMemoryCache) {
+			this.localMemoryCache = localMemoryCache;
+		}
+
+		public boolean isLocalFileCache() {
+			return localFileCache;
+		}
+
+		public void setLocalFileCache(boolean localFileCache) {
+			this.localFileCache = localFileCache;
+		}
+
+		public int getType() {
+			return type;
+		}
+
+		public void setType(int type) {
+			this.type = type;
+		}
+
+		public long getLocalFileCacheTime() {
+			return localFileCacheTime;
+		}
+
+		public void setLocalFileCacheTime(long localFileCacheTime) {
+			this.localFileCacheTime = localFileCacheTime;
+		}
+
+		public FileGuider getSavePath() {
+			return savePath;
+		}
+
+		/**
+		 * 注意不要把同一个对象给多个网络连接
+		 */
+		public void setSavePath(FileGuider savePath) {
+			this.savePath = savePath;
+		}
+
+		public boolean isNotifyUserWithExit() {
+			return notifyUserWithExit;
+		}
+
+		public void setNotifyUserWithExit(boolean notifyUserOrExit) {
+			this.notifyUserWithExit = notifyUserOrExit;
+		}
+
+		public boolean isNeedGlobalInitialization() {
+			return needGlobalInitialization;
+		}
+
+		public void setNeedGlobalInitialization(boolean needGlobalInitialization) {
+			this.needGlobalInitialization = needGlobalInitialization;
+		}
+
+		public int getId() {
+			return id;
+		}
+
+		public void setId(int id) {
+			this.id = id;
+		}
+
+		public String getHost() {
+			return host;
+		}
+
+		public void setHost(String host) {
+			this.host = host;
+		}
+
+		public int getEffect() {
+			return effect;
+		}
+
+		public void setEffect(int effect) {
+			this.effect = effect;
+		}
+
+		public int getEffectState() {
+			return effectState;
+		}
+
+		public void setEffectState(int effectState) {
+			this.effectState = effectState;
+		}
+
+		public int getCacheMode() {
+			return cacheMode;
+		}
+
+		/**
+		 * 缓存模式。0:自动模式（有缓存用缓存，没缓存用网络）,1:只使用缓存,2:只使用网络 CACHE_MODE_AUTO、CACHE_MODE_ONLY_CACHE、CACHE_MODE_ONLY_NET
+		 */
+		public void setCacheMode(int cacheMode) {
+			this.cacheMode = cacheMode;
+		}
+
+		public void setNeedShareImage(boolean needShareImage) {
+			this.needShareImage = needShareImage;
+		}
+
+		public boolean isNeedShareImage() {
+			return needShareImage;
+		}
+
+		public void setNeedEncrypt(boolean state) {
+			this.mNeedAgainEncrypt = state;
+		}
+
+		public boolean getNeedAgainEncrypt() {
+			return mNeedAgainEncrypt;
+		}
+
+		public boolean isTopPriority() {
+			return isTopPriority;
+		}
+
+		public void setTopPriority(boolean isTopPriority) {
+			this.isTopPriority = isTopPriority;
+		}
+
+	}
+
+	public static String mergerUrlAndParams(String urlStr, Map<String, String> params) {
+
+		if (null == params) {
+			return urlStr;
+		}
+
+		Set<String> keySet = params.keySet();
+		if (null == keySet || keySet.isEmpty()) {
+			return urlStr;
+		}
+
+		StringBuilder url = new StringBuilder(urlStr);
+		int i = urlStr.indexOf("?");
+		if (i == -1) {
+			url.append("?");
+		} else {
+			String queryString = urlStr.substring(i + 1);
+			if (!TextUtils.isEmpty(queryString) && !queryString.endsWith("&")) {
+				url.append("&");
+			}
+		}
+
+		for (Iterator<String> iterator = keySet.iterator(); iterator.hasNext();) {
+			String key = (String) iterator.next();
+			String value = params.get(key);
+			url.append(key).append("=").append(value);
+			if (iterator.hasNext()) {
+				url.append("&");
+			}
+		}
+
+		return url.toString();
+
+	}
+
+	public static void cleanCookies() {
+		cookies = null;
+	}
+
+	public static void setCookies(String str) {
+		cookies = str;
+	}
+
+}

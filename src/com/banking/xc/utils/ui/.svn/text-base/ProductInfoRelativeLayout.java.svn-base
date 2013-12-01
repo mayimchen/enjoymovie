@@ -1,0 +1,177 @@
+package com.jingdong.app.mall.utils.ui;
+
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.product.ProductDetailInfoActivity;
+import com.jingdong.app.mall.utils.Log;
+
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.drawable.Drawable;
+import android.util.AttributeSet;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.LinearInterpolator;
+import android.view.animation.Transformation;
+import android.webkit.WebView;
+import android.widget.RelativeLayout;
+
+public class ProductInfoRelativeLayout extends RelativeLayout {
+
+	private static final String TAG = "ProductInfoRelativeLayout";
+	private static int RATE = 5;
+
+	private RelativeLayout titleLayout;
+	private Integer tHeight;
+	private float firstPointY;
+	private float firstPointX;
+	private float currentPostionY = 0;
+	private float currentPostionX = 0;
+	private ProductDetailInfoActivity activity;
+	private boolean isOpen = true;
+	private float lastOffset = 0;
+	private float realOffset;
+	private boolean canDispatchKeyUp = true;
+	private boolean isPointInRadio = false;
+
+	public ProductInfoRelativeLayout(Context context) {
+		super(context);
+	}
+
+	public ProductInfoRelativeLayout(Context context, AttributeSet attrs) {
+		super(context, attrs);
+	}
+
+	public ProductInfoRelativeLayout(Context context, AttributeSet attrs, int defStyle) {
+		super(context, attrs, defStyle);
+	}
+
+	public void init(ProductDetailInfoActivity activity) {
+		this.activity = activity;
+		titleLayout = (RelativeLayout) getChildAt(0);
+	}
+
+	/**
+	 * 确定手指按下的点是否在标签按钮区域
+	 * 
+	 * @return
+	 */
+	private void checkPointInRadio() {
+		int[] location = new int[2];
+		activity.getScrollView().getLocationOnScreen(location);
+
+		int left = location[0];
+		int top = location[1];
+		int right = left + activity.getScrollView().getWidth();
+		int bottom = top + activity.getScrollView().getHeight();
+		if(Log.D){
+			Log.d(TAG, "checkPointInRadio -->>left " +left );
+			Log.d(TAG, "checkPointInRadio -->>top " + top);
+			Log.d(TAG, "checkPointInRadio -->>right " +right );
+			Log.d(TAG, "checkPointInRadio -->>bottom " +bottom );
+			Log.d(TAG, "checkPointInRadio -->>firstPointX " + firstPointX);
+			Log.d(TAG, "checkPointInRadio -->>firstPointY " +firstPointY );
+		}
+		if (firstPointX >= left && firstPointX <= right && firstPointY >= top && firstPointY <= bottom) {
+			isPointInRadio =  true;
+			return;
+		}
+		isPointInRadio =  false;
+	}
+
+	@Override
+	public boolean dispatchTouchEvent(MotionEvent ev) {
+		if (Log.D) {
+			Log.d(TAG, "dispatchTouchEvent -->> "+ev.getAction());
+		}
+		if (null == tHeight) {
+			tHeight = titleLayout.getHeight();
+		}
+		int action = ev.getAction();
+
+		switch (action) {
+		case MotionEvent.ACTION_MOVE:
+			currentPostionY = ev.getRawY();
+			currentPostionX = ev.getRawX();
+			float offsetY = currentPostionY - firstPointY;
+			float offsetX = currentPostionX - firstPointX;
+			if (Math.abs(offsetX) > Math.abs(offsetY) ) {//如果x轴偏移量大于y轴，就交给系统处理
+				return super.dispatchTouchEvent(ev);
+			}
+			WebView webView = null;
+			ViewGroup vg = ((ViewGroup) activity.getNowBranchView());
+			for (int i = 0; i < vg.getChildCount(); i++) {// 取出webview待用
+				View temp = vg.getChildAt(i);
+				if (temp instanceof WebView) {
+					webView = (WebView) temp;
+					break;
+				}
+			}
+			realOffset = offsetY - lastOffset;
+			lastOffset = offsetY;
+			LayoutParams lParams = (LayoutParams) titleLayout.getLayoutParams();
+			if(Log.D){
+				Log.d(TAG, "checkPointInRadio() -->> " + isPointInRadio);
+			}
+			if (!isPointInRadio) {
+				if ((lParams.topMargin == -tHeight  && offsetY < 0) || (offsetY > 0 && null != webView && webView.getScrollY() > 0)) {//处于以下两种状态时，把手势事件交给系统处理：1、titleLayout处于隐藏状态，且offsetY<0;2、offsetY>0且webview没有滚动到顶端
+					return super.dispatchTouchEvent(ev);
+				}
+			} else {
+				if (Log.D) {
+					Log.d(TAG, "dispatchTouchEvent checkPointInRadio-->>offset " + offsetY);
+				}
+				if (Math.abs(offsetY) <= 50) {// 减少误操作
+					return super.dispatchTouchEvent(ev);
+				}else {
+					canDispatchKeyUp = false;
+				}
+			}
+			if(Log.D){
+				Log.d(TAG, "dispatchTouchEvent -->>  lParams.topMargin" + lParams.topMargin);
+			}
+			int temp = lParams.topMargin + (int) realOffset;
+			if(temp >= 0){
+				temp = 0;
+			}else if(temp <= - tHeight){
+				temp = - tHeight;
+			}
+			lParams.setMargins(0, temp, 0, 0);
+			requestLayout();
+			if (Log.D) {
+				Log.d(TAG, "dispatchTouchEvent -->>temp " + temp);
+				Log.d(TAG, "dispatchTouchEvent -->>realOffset " + realOffset);
+				Log.d(TAG, "dispatchTouchEvent -->>offsetY " + offsetY);
+				Log.d(TAG, "dispatchTouchEvent -->>currentPostionY " + currentPostionY);
+				Log.d(TAG, "dispatchTouchEvent -->>firstPointY " + firstPointY);
+			}
+//			ev.setAction(MotionEvent.ACTION_CANCEL);
+			return true;
+		case MotionEvent.ACTION_UP:
+			lastOffset = 0;
+			if(Log.D){
+				Log.d(TAG, "MotionEvent.ACTION_UP -->> " + canDispatchKeyUp);
+			}
+			if(!canDispatchKeyUp){//阻止ACTION_UP事件向下分发，为了避免出现滚动titleLayout的同时相应radio的按键事件
+				ev.setAction(MotionEvent.ACTION_CANCEL);
+				return super.dispatchTouchEvent(ev);
+			}
+			break;
+		case MotionEvent.ACTION_DOWN:
+			firstPointY = ev.getRawY();
+			firstPointX = ev.getRawX();
+			canDispatchKeyUp = true;
+			checkPointInRadio();
+			break;
+		}
+
+		return super.dispatchTouchEvent(ev);
+	}
+
+}

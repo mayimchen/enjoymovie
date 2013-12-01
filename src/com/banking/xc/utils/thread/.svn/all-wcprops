@@ -1,0 +1,17 @@
+K 25
+svn:wc:ra_dav:version-url
+V 97
+/mobile/JdAppAndroid/!svn/ver/3102/branches/androidJd-main/src/com/jingdong/app/mall/utils/thread
+END
+ThreadPool.java
+K 25
+svn:wc:ra_dav:version-url
+V 113
+/mobile/JdAppAndroid/!svn/ver/3102/branches/androidJd-main/src/com/jingdong/app/mall/utils/thread/ThreadPool.java
+END
+PooledThread.java
+K 25
+svn:wc:ra_dav:version-url
+V 115
+/mobile/JdAppAndroid/!svn/ver/2814/branches/androidJd-main/src/com/jingdong/app/mall/utils/thread/PooledThread.java
+END

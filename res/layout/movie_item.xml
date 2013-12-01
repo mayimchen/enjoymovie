@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/product_list_item"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:padding="10dp">
+
+   <!-- 75要更大 -->
+    <ImageView
+        android:id="@+id/movie_item_image"
+        android:layout_width="80dp"
+        android:layout_height="110dp"
+        android:scaleType="fitCenter"
+        android:padding="5dp"
+        android:background="@drawable/background_corners">
+    </ImageView>
+
+    <!-- 商品名 -->
+    <TextView
+        android:id="@+id/movie_item_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="13dp"
+        android:textColor="#000000"
+        android:ellipsize="end"
+        android:layout_alignParentTop="true"
+        android:layout_marginLeft="11dp"
+        android:layout_marginRight="15dp"
+        android:layout_toRightOf="@id/movie_item_image"
+        >
+    </TextView>
+
+    <!-- 广告词 -->
+    <!-- 这里需要把android:visibility="gone"吗？ -->
+    <TextView
+        android:id="@+id/movie_item_director"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="13sp"
+        android:textColor="@color/font_red"
+        android:ellipsize="end"
+        android:lines="2"
+        android:layout_below="@id/movie_item_name"
+        android:layout_marginTop="12dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginRight="15dp"
+        android:layout_toRightOf="@id/movie_item_image"
+        >
+    </TextView>
+
+    <!-- -->
+   <TextView
+        android:id="@+id/movie_item_stars"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/movie_item_director"
+        android:layout_alignLeft="@id/movie_item_director"
+        android:layout_marginLeft="2dp"
+        android:layout_marginTop="8dp"
+        android:textSize="14sp"
+        android:text="出发时间："
+    >
+    </TextView>
+    <!-- <TextView
+        android:id="@+id/vacation_item_setOffdays_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/vacation_item_adword"
+        android:layout_toRightOf="@id/vacation_item_setOffdays"
+        android:layout_marginLeft="2dp"
+        android:layout_marginTop="8dp"
+        android:textSize="14sp"
+       >
+    </TextView> -->
+
+    
+
+</RelativeLayout>

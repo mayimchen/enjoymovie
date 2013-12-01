@@ -1,0 +1,29 @@
+package com.jingdong.app.mall.utils;
+
+import android.os.Handler;
+
+public class CPAUtils {
+
+	public static void loadLibrary() {
+	}
+
+	interface GlobalInitializationInterface {
+
+		void exit();
+
+		void registerDevice(boolean isFirst);
+
+	}
+
+	public static class Processor {
+
+		public Processor(Handler handler, HttpGroup httpGroup, GlobalInitializationInterface globalInitializationInterface) {
+		}
+
+		public boolean beforeRegisterDevice() {
+			return false;
+		}
+
+	}
+
+}

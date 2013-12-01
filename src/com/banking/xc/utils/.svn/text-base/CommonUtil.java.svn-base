@@ -1,0 +1,1080 @@
+package com.jingdong.app.mall.utils;
+
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Enumeration;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import org.apache.http.HttpHost;
+import org.apache.http.client.utils.URIUtils;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import android.app.Dialog;
+import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.Uri;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.telephony.TelephonyManager;
+import android.text.TextUtils;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ListAdapter;
+import android.widget.ListView;
+
+import com.jingdong.app.mall.MainActivity;
+import com.jingdong.app.mall.MyApplication;
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.WebActivity;
+import com.jingdong.app.mall.config.Configuration;
+import com.jingdong.app.mall.constant.Constants;
+import com.jingdong.app.mall.constant.NetworkConstant;
+import com.jingdong.app.mall.home.HomeActivity;
+import com.jingdong.app.mall.lbs.LocManager;
+import com.jingdong.app.mall.login.LoginActivity;
+import com.jingdong.app.mall.login.LoginUser;
+import com.jingdong.app.mall.personel.MyOrderListActivity;
+import com.jingdong.app.mall.service.MessagePullService;
+import com.jingdong.app.mall.utils.HttpGroup.HttpError;
+import com.jingdong.app.mall.utils.HttpGroup.HttpGroupSetting;
+import com.jingdong.app.mall.utils.HttpGroup.HttpResponse;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSetting;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSettingParams;
+import com.jingdong.app.mall.utils.MyActivity.ResumeListener;
+import com.jingdong.app.mall.utils.ui.DialogController;
+import com.unionpay.upomp.bypay.activity.SplashActivity;
+import com.unionpay.upomp.bypay.util.UPOMP;
+import com.unionpay.upomp.bypay.util.Utils;
+
+/**
+ * content provider 工具类
+ * 
+ * @author zhangjunping
+ * 
+ */
+
+public final class CommonUtil {
+
+	private static final String TAG = "CommonUtil";
+
+	/**
+	 * // * 检测网络可用否 // * @param context // * @return boolean true 可用， false 不可用 //
+	 */
+	// public static boolean CheckNetWork(Context context){
+	// ConnectivityManager manager = (ConnectivityManager)
+	// context.getSystemService(Context.CONNECTIVITY_SERVICE);
+	// NetworkInfo networkinfo = manager.getActiveNetworkInfo();
+	// if (networkinfo == null || !networkinfo.isAvailable()) {
+	// return false;
+	// }
+	// return true;
+	// }
+	private static String marketPriceFlag = null;// 服务端下发的全局市场价开关
+
+	private static long lastToClientTimeMillis;// 最后请求toClient的时间
+
+	public static String miaoShaKey;// 秒杀加密的key
+	
+	public static SharedPreferences sharedPreferences;
+
+	public static LayoutInflater getLayoutInflater() {
+		return LayoutInflater.from(MyApplication.getInstance());
+	}
+
+	/**
+	 * 检测网络连接是否可用
+	 * 
+	 * @param ctx
+	 * @return true 可用; false 不可用
+	 */
+	public static boolean CheckNetWork() {
+		// 连接管理器
+		ConnectivityManager cm = (ConnectivityManager) MyApplication.getInstance().getSystemService(Context.CONNECTIVITY_SERVICE);
+		if (cm == null) {
+			return false;
+		}
+		NetworkInfo[] netinfo = cm.getAllNetworkInfo();
+		if (netinfo == null) {
+			return false;
+		}
+		for (int i = 0; i < netinfo.length; i++) {
+			if (netinfo[i].isConnected()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static void toClient(final String tokenKey) {
+
+		// 如果上次点击事件没有超过1秒，将直接返回，不处理
+		if (System.currentTimeMillis() - lastToClientTimeMillis < 3000) {
+			return;
+		}
+		lastToClientTimeMillis = System.currentTimeMillis();
+
+		// 准备httpGroup
+		HttpGroupSetting httpGroupSetting = new HttpGroupSetting();
+		httpGroupSetting.setType(HttpGroupSetting.TYPE_JSON);
+		httpGroupSetting.setMyActivity(MyApplication.getInstance().getCurrentMyActivity());
+		final HttpGroup httpGroup = new HttpGroup.HttpGroupaAsynPool(httpGroupSetting);
+
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setNotifyUser(true);
+		httpSetting.setFunctionId("getToken");
+		httpSetting.setListener(new HttpGroup.OnCommonListener() {
+			@Override
+			public void onReady(HttpSettingParams httpSettingParams) {
+				httpSettingParams.putJsonParam("tokenKey", tokenKey);
+			}
+
+			@Override
+			public void onError(HttpError error) {
+			}
+
+			@Override
+			public void onEnd(HttpResponse httpResponse) {
+				JSONObjectProxy tokenValue = httpResponse.getJSONObject().getJSONObjectOrNull("tokenValue");
+				if (tokenValue != null) {
+					String action = tokenValue.getStringOrNull("action");
+					if (null == action) {
+						return;
+					}
+
+					String pin = tokenValue.getStringOrNull("pin");
+					String oldPin = LoginUser.getLoginUserName();
+
+					// pin检查（区分大小写）
+					pin = (null == pin ? "" : pin);
+					oldPin = (null == oldPin ? "" : oldPin);
+					if (!oldPin.equals(pin)) {
+						if (Log.D) {
+							Log.d(TAG, "toClient() pin change -->> old:" + oldPin + ",new:" + pin);
+						}
+
+						final MyActivity myActivity = MyApplication.getInstance().getCurrentMyActivity();
+
+						if (TextUtils.isEmpty(pin)) {// 注销
+
+							// 历史
+							MyApplication.getInstance().getMainActivity().removeAllRecords(false);
+							// 用户名、密码、各标记
+							LoginActivity.clearRemember(true, true, true);
+							// 登陆标记
+							getJdSharedPreferences().edit().remove(Constants.LOGIN_FLAG).commit();
+							LoginUser.setUserStateOff(true);
+							// 其它
+							Constants.clearOrderInfo();
+							// widget
+							if (!MessagePullService.widgetIsRunInBg()) {
+								final Intent serviceIntent = new Intent(myActivity, MessagePullService.class);
+								serviceIntent.setAction(MessagePullService.ACTION_STEP_SEEVICE);
+								myActivity.post(new Runnable() {
+									public void run() {
+										myActivity.startService(serviceIntent);
+									}
+								});
+							}
+							// cookies
+							HttpGroup.cleanCookies();
+
+						} else {// 登陆或切换用户
+
+							// 历史
+							MyApplication.getInstance().getMainActivity().removeAllRecords(false);
+							// 用户名、密码、各标记
+							LoginActivity.clearRemember(true, true, true);
+
+							// 重新登录，强制将消息绑定标志位置为 未绑定
+							PushMessageUtils.saveBindState(false);
+
+							// 新用户信息
+							JSONObject jsonObject = new JSONObject();
+							try {
+								jsonObject.put("pin", pin);
+							} catch (JSONException e) {
+								e.printStackTrace();
+							}
+							LoginUser.setUserInfo(jsonObject);
+							// 登陆标志位
+							LoginUser.setUserState(Constants.LOG_IN);
+
+						}
+
+					}
+
+					if ("thirdLogin".equals(action)) {// - - - - - - - - - - - - - - - - - - - - 联合登陆回来
+						if (Log.D) {
+							Log.d(TAG, "toClient() thirdLogin -->> ");
+						}
+						if (!TextUtils.isEmpty(pin)) {// 登陆用户
+							// 历史
+							MyApplication.getInstance().getMainActivity().removeAllRecords(false);
+							// 用户名、密码、各标记
+							LoginActivity.clearRemember(true, true, true);
+							// 新用户信息
+							JSONObject jsonObject = new JSONObject();
+							try {
+								jsonObject.put("pin", pin);
+							} catch (JSONException e) {
+								e.printStackTrace();
+							}
+							LoginUser.setUserInfo(jsonObject);
+							// 登陆标志位
+							LoginUser.setUserState(Constants.LOG_IN);
+
+							MyActivity myActivity = MyApplication.getInstance().getCurrentMyActivity();
+							if (myActivity instanceof LoginActivity) {
+								// 登陆成功之后确定转跳到哪
+								final LoginActivity loginActivity = ((LoginActivity) myActivity);
+								loginActivity.post(new Runnable() {
+									public void run() {
+										loginActivity.afterSuccess();
+									}
+								});
+							}
+						}
+					} else if ("pay".equals(action)) {// - - - - - - - - - - - - - - - - - - - - 在线支付回来
+						if (Log.D) {
+							Log.d(TAG, "toClient() pay -->> ");
+						}
+						final MyActivity myActivity = MyApplication.getInstance().getCurrentMyActivity();
+						if (!(myActivity instanceof HomeActivity)) {// 当前页面不是HomeActivity才转跳
+							final Intent i = new Intent(myActivity, HomeActivity.class);
+							i.putExtra(MainActivity.SINGLE_INSTANCE_FLAG, true);
+							myActivity.post(new Runnable() {
+								public void run() {
+									myActivity.startActivityInFrame(i);
+								}
+							});
+						}
+					} else if ("unionpay".equals(action)) {// - - - - - - - - - - - - - - - - - - - - 银联支付回来
+						if (Log.D) {
+							Log.d(TAG, "toClient() unionpay -->> ");
+						}
+
+						// 检查SDK版本是否满足支付要求
+						if (!checkSDKForPay()) {
+							return;
+						}
+
+						final String pinFinal = pin;
+						final String orderIdFinal = tokenValue.getStringOrNull("orderId");
+						final String platFinal = tokenValue.getStringOrNull("plat");
+
+						HttpSetting httpSetting = new HttpGroup.HttpSetting();
+						// httpSetting.setHost("10.10.224.67:22202");// TODO
+						httpSetting.setFunctionId("jdMPay");
+						// httpSetting.setFunctionId("uniomPay");// TODO
+						httpSetting.setListener(new HttpGroup.OnCommonListener() {
+							@Override
+							public void onReady(HttpSettingParams httpSettingParams) {
+								if (!TextUtils.isEmpty(pinFinal)) {
+									httpSettingParams.putJsonParam("pin", pinFinal);
+								}
+								if (!TextUtils.isEmpty(orderIdFinal)) {
+									httpSettingParams.putJsonParam("orderId", orderIdFinal);
+								}
+								if (!TextUtils.isEmpty(platFinal)) {
+									httpSettingParams.putJsonParam("plat", platFinal);
+								} else {
+									httpSettingParams.putJsonParam("plat", "mobile");// TODO 默认值
+								}
+							}
+
+							@Override
+							public void onError(HttpError error) {
+
+							}
+
+							@Override
+							public void onEnd(HttpResponse httpResponse) {
+								JSONObjectProxy jsonObject = httpResponse.getJSONObject();
+								String message = jsonObject.getStringOrNull("error");
+								// String message = jsonObject.getStringOrNull("message");// TODO
+								String xml = jsonObject.getStringOrNull("message");
+								// String xml = jsonObject.getStringOrNull("payMessage");// TODO
+								if (TextUtils.isEmpty(xml)) {
+									if (!TextUtils.isEmpty(message)) {// 存在提示信息
+										final DialogController dialogController = new DialogController() {
+											public void onClick(DialogInterface dialog, int which) {
+												switch (which) {
+												case Dialog.BUTTON_NEUTRAL:
+													// 不管从订单、下单、轻松哪个来到此页面，点确定都回到订单列表。
+													MyActivity myActivity = MyApplication.getInstance().getCurrentMyActivity();
+													if (Log.D) {
+														Log.d(TAG, "finish -->> myActivity:" + myActivity);
+													}
+													((MainActivity) myActivity.getParent()).finish();
+													Intent intent = new Intent(myActivity, MyOrderListActivity.class);
+													((MainActivity) myActivity.getParent()).startSubActivity(intent);
+													break;
+												}
+											};
+										};
+										dialogController.setTitle(MyApplication.getInstance().getString(R.string.prompt));
+										dialogController.setMessage(message);
+										dialogController.setNeutralButton(MyApplication.getInstance().getString(R.string.ok));
+										dialogController.init(MyApplication.getInstance().getCurrentMyActivity());
+										MyApplication.getInstance().getCurrentMyActivity().post(new Runnable() {
+											public void run() {
+												dialogController.show();
+											}
+										});
+									}
+									return;
+								}
+								doPay(xml);
+							}
+						});
+						httpSetting.setNotifyUser(true);
+						httpGroup.add(httpSetting);
+
+					}
+
+				}
+			}
+		});
+
+		httpGroup.add(httpSetting);
+	}
+
+	/**
+	 * 检查SDK版本是否满足支付要求
+	 */
+	private static boolean checkSDKForPay() {
+		int sdkNum = 7;
+		try {
+			sdkNum = Integer.parseInt(Build.VERSION.SDK);
+		} catch (Throwable e) {
+			e.printStackTrace();
+		}
+		if (sdkNum < 7) {// 系统版本低于android2.1
+			final DialogController dialogController = new DialogController() {
+				@Override
+				public void onClick(DialogInterface dialog, int which) {
+					switch (which) {
+					case Dialog.BUTTON_NEUTRAL:
+						MyActivity myActivity = MyApplication.getInstance().getCurrentMyActivity();
+						((MainActivity) myActivity.getParent()).finish();
+						Intent intent = new Intent(myActivity, MyOrderListActivity.class);
+						((MainActivity) myActivity.getParent()).startSubActivity(intent);
+						break;
+					}
+				}
+			};
+			dialogController.setTitle(MyApplication.getInstance().getString(R.string.prompt));
+			dialogController.setMessage(MyApplication.getInstance().getString(R.string.system_version_too_low_7));
+			dialogController.setNeutralButton(MyApplication.getInstance().getString(R.string.ok));
+			dialogController.init(MyApplication.getInstance().getCurrentMyActivity());
+			MyApplication.getInstance().getCurrentMyActivity().post(new Runnable() {
+				public void run() {
+					dialogController.show();
+				}
+			});
+			return false;
+		}
+		return true;
+	}
+
+	public static void doPay(final String xml) {
+
+		if (Log.D) {
+			Log.d(TAG, "pay xml -->> " + xml);
+		}
+
+		// 初始化手机POS环境
+		Utils.setPackageName(MyApplication.getInstance().getPackageName());
+		UPOMP.init();
+
+		final MyActivity myActivity = MyApplication.getInstance().getCurrentMyActivity();
+
+		final Intent intent = new Intent(myActivity, SplashActivity.class);
+		Bundle bundle = new Bundle();
+		bundle.putString("xml", xml);
+		intent.putExtras(bundle);
+		myActivity.addResumeListener(new ResumeListener() {
+			@Override
+			public void onResume() {
+				myActivity.removeResumeListener(this);
+				String payResult = UPOMP.getPayResult();
+
+				if (null != payResult && payResult.contains("<respCode>0000</respCode>")) {// 支付成功
+					if (Log.D) {
+						Log.d(TAG, "pay result success -->> ");
+					}
+					MyActivity myActivity = MyApplication.getInstance().getCurrentMyActivity();
+					if (Log.D) {
+						Log.d(TAG, "finish -->> myActivity:" + myActivity);
+					}
+					((MainActivity) myActivity.getParent()).finish();
+					Intent intent = new Intent(myActivity, MyOrderListActivity.class);
+					((MainActivity) myActivity.getParent()).startSubActivity(intent);
+				} else {// 支付失败
+					if (Log.D) {
+						Log.d(TAG, "pay result failure -->> ");
+					}
+					final DialogController dialogController = new DialogController() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							switch (which) {
+							case Dialog.BUTTON_POSITIVE:// 是
+								if(myActivity instanceof WebActivity){
+									((WebActivity)myActivity).reload();
+								}
+								break;
+							case Dialog.BUTTON_NEGATIVE:// 否
+								MyActivity myActivity = MyApplication.getInstance().getCurrentMyActivity();
+								if (Log.D) {
+									Log.d(TAG, "finish -->> myActivity:" + myActivity);
+								}
+								((MainActivity) myActivity.getParent()).finish();
+								Intent intent = new Intent(myActivity, MyOrderListActivity.class);
+								((MainActivity) myActivity.getParent()).startSubActivity(intent);
+								break;
+							}
+						}
+					};
+					dialogController.setTitle(MyApplication.getInstance().getString(R.string.prompt));
+					dialogController.setMessage(MyApplication.getInstance().getString(R.string.pay_failure));
+					dialogController.setPositiveButton(MyApplication.getInstance().getString(R.string.yes));
+					dialogController.setNegativeButton(MyApplication.getInstance().getString(R.string.no));
+					dialogController.init(myActivity);
+					myActivity.post(new Runnable() {
+						public void run() {
+							dialogController.show();
+						}
+					});
+				}
+			}
+		});
+		myActivity.post(new Runnable() {
+			public void run() {
+				myActivity.startActivity(intent);
+			}
+		});
+
+	}
+
+	/**
+	 * 
+	 */
+	public interface BrowserUrlListener {
+		void onComplete(String url);
+	}
+
+	/**
+	 * 通过与服务端交互取得与web版打通所需的url，然后直接使用浏览器打开
+	 */
+	public static void toBrowser(String action, URLParamMap params) {
+
+		BrowserUrlListener listener = new BrowserUrlListener() {
+			@Override
+			public void onComplete(String url) {
+				Uri uri = Uri.parse(url);
+				toBrowser(uri);
+			}
+		};
+		queryBrowserUrl(action, params, listener);
+
+	}
+
+	/**
+	 * 使用浏览器打开网址
+	 */
+	public static void toBrowser(Uri uri) {
+		// 1.先尝试使用chrome浏览器
+		Intent i = newBrowserIntent(uri, true);
+		if (isIntentAvailable(i)) {
+			MyApplication.getInstance().getCurrentMyActivity().startActivityNoException(i);
+		} else {
+			MyApplication.getInstance().getCurrentMyActivity().startActivityNoException(newBrowserIntent(uri, false));
+		}
+	}
+
+	public static Intent newBrowserIntent(Uri uri, boolean force) {
+		Intent i = new Intent(Intent.ACTION_VIEW, uri);
+
+		// 由于外部浏览器可能无法准确跳转回来，所以现在只调用系统的浏览器
+		if (force) {
+			i.setClassName("com.android.browser", "com.android.browser.BrowserActivity");
+		}
+
+		i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		return i;
+	}
+
+	/**
+	 * 判断intent是否有效
+	 */
+	public static boolean isIntentAvailable(Intent intent) {
+		PackageManager packageManager = MyApplication.getInstance().getPackageManager();
+		List<ResolveInfo> list = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+		return null != list && list.size() > 0;
+	}
+
+	/**
+	 * 通过与服务端交互取得与web版打通所需的url，此方法一般用于webView
+	 */
+	public static void queryBrowserUrl(final String action, final URLParamMap params, final BrowserUrlListener listener) {
+
+		// 准备httpGroup
+		HttpGroupSetting httpGroupSetting = new HttpGroupSetting();
+		httpGroupSetting.setType(HttpGroupSetting.TYPE_JSON);
+		httpGroupSetting.setMyActivity(MyApplication.getInstance().getCurrentMyActivity());
+		HttpGroup httpGroup = new HttpGroup.HttpGroupaAsynPool(httpGroupSetting);
+
+		HttpSetting httpSetting = new HttpSetting();
+		if("ordermap".equals(action)){
+			httpSetting.setEffect(HttpSetting.EFFECT_NO);
+		}
+		httpSetting.setNotifyUser(true);
+		httpSetting.setFunctionId("genToken");
+		httpSetting.setListener(new HttpGroup.OnCommonListener() {
+			@Override
+			public void onReady(HttpSettingParams httpSettingParams) {
+				httpSettingParams.putJsonParam("action", action);
+			}
+
+			@Override
+			public void onError(HttpError error) {
+			}
+
+			@Override
+			public void onEnd(HttpResponse httpResponse) {
+				JSONObjectProxy jsonObject = httpResponse.getJSONObject();
+				String token = jsonObject.getStringOrNull("tokenKey");
+				if (null == token) {
+					onError(null);
+					return;
+				}
+				String url = jsonObject.getStringOrNull("url");
+				if (null == url) {
+					onError(null);
+					return;
+				}
+				if (Log.D) {
+					Log.d(TAG, "fun:genToken onEnd() -->> token = " + token);
+					Log.d(TAG, "fun:genToken onEnd() -->> url = " + url);
+				}
+				params.put("tokenKey", token);
+				if (LocManager.lati != 0 || LocManager.longi != 0) {
+					JSONObject lbsJO = new JSONObject();
+					try {
+						if (LocManager.lati != 0) {
+							lbsJO.put("lat", "" + LocManager.lati);
+						}
+						if (LocManager.longi != 0) {
+							lbsJO.put("lng", "" + LocManager.longi);
+						}
+						if (LocManager.provinceId != 0) {
+							lbsJO.put("provinceId", "" + LocManager.provinceId);
+						}
+						if (LocManager.cityId != 0) {
+							lbsJO.put("cityId", "" + LocManager.cityId);
+						}
+						if (LocManager.districtId != 0) {
+							lbsJO.put("districtId", "" + LocManager.districtId);
+						}
+						if (LocManager.provinceName != null) {
+							lbsJO.put("provinceName", "" + LocManager.provinceName);
+						}
+						if (LocManager.cityName != null) {
+							lbsJO.put("cityName", "" + LocManager.cityName);
+						}
+						if (LocManager.districtName != null) {
+							lbsJO.put("districtName", "" + LocManager.districtName);
+						}
+					} catch (JSONException e1) {
+						e1.printStackTrace();
+					}
+					params.put("lbs", lbsJO.toString());
+				}
+				String mergerUrl = HttpGroup.mergerUrlAndParams(url, params);
+				String mHost = Configuration.getProperty(Configuration.M_HOST);
+				if (null != mHost) {
+					int mPort = 80;
+					String[] split = mHost.split(":");
+					if (split.length > 1) {
+						mHost = split[0];
+						try {
+							mPort = Integer.parseInt(split[1]);
+						} catch (NumberFormatException e) {
+						}
+					}
+					try {
+						URI uri = new URI(mergerUrl);
+						mergerUrl = URIUtils.rewriteURI(uri, new HttpHost(mHost, mPort)).toString();
+					} catch (URISyntaxException e) {
+						e.printStackTrace();
+					}
+				}
+				if (Log.D) {
+					Log.d("Temp", "queryBrowserUrl() mergerUrl -->> " + mergerUrl);
+				}
+				listener.onComplete(mergerUrl);
+			}
+		});
+		httpGroup.add(httpSetting);
+
+	}
+
+	/**
+	 * 检测当前网络类型
+	 * 
+	 * @return 1:cmnet,2:cmwap
+	 */
+	public static int checkNetWorkType() {
+		String proxyHost = android.net.Proxy.getDefaultHost();
+		if (proxyHost != null) {
+			return NetworkConstant.NetworkState.CMWAP;
+		} else {
+			return NetworkConstant.NetworkState.CMNET;
+		}
+	}
+
+	public String getLocalIpAddress() {
+		try {
+			for (Enumeration<NetworkInterface> en = NetworkInterface.getNetworkInterfaces(); en.hasMoreElements();) {
+				NetworkInterface intf = en.nextElement();
+				for (Enumeration<InetAddress> enumIpAddr = intf.getInetAddresses(); enumIpAddr.hasMoreElements();) {
+					InetAddress inetAddress = enumIpAddr.nextElement();
+					if (!inetAddress.isLoopbackAddress()) {
+						return inetAddress.getHostAddress().toString();
+					}
+				}
+			}
+		} catch (SocketException ex) {
+			if (Log.V) {
+				Log.v("WifiPreference IpAddress", ex.toString());
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * 获取主配置文件
+	 */
+	public static SharedPreferences getJdSharedPreferences() {
+		if (null == sharedPreferences) {
+			if (Log.D) {
+				Log.d("CommonUtil", " -->> sharedPreferences:" + sharedPreferences);
+			}
+			sharedPreferences = MyApplication.getInstance()//
+					.getSharedPreferences(Constants.JD_SHARE_PREFERENCE, Context.MODE_PRIVATE);
+		}
+		if (Log.D) {
+			Log.d("CommonUtil", " -->> size:" + sharedPreferences.getAll().size());
+		}
+
+		return sharedPreferences;
+	}
+
+	/**
+	 * 获取主配置文件中的市场价是否显示标志位
+	 */
+	public static String getMarketPriceFlag() {
+		if (marketPriceFlag == null) {
+			// marketpriceflag:0 关闭; 1 打开
+			marketPriceFlag = getJdSharedPreferences().getString("marketpriceflag", "0");
+		}
+		return marketPriceFlag;
+	}
+
+	// /**
+	// * 取得WIFI MAC地址（旧）
+	// */
+	// public static String getLocalMacAddress() {
+	// WifiManager wifi = (WifiManager) MyApplication.getInstance().getSystemService(Context.WIFI_SERVICE);
+	// WifiInfo info = wifi.getConnectionInfo();
+	// return info.getMacAddress();
+	// }
+
+	/**
+	 * 取得WIFI MAC地址（新）
+	 */
+	public synchronized static void getLocalMacAddress(final MacAddressListener listener) {
+		try {
+			if (Log.D) {
+				Log.d(TAG, "getMacAddress() -->> ");
+			}
+
+			final WifiManager wifi = (WifiManager) MyApplication.getInstance().getSystemService(Context.WIFI_SERVICE);
+			if (null == wifi) {// 没有wifi模块，直接返回空
+				listener.setMacAddress(null);
+			}
+			final WifiInfo info = wifi.getConnectionInfo();
+			String macAddress = info.getMacAddress();
+
+			if (Log.D) {
+				Log.d(TAG, "getMacAddress() macAddress without open -->> " + macAddress);
+			}
+
+			if (null != macAddress) {
+				listener.setMacAddress(macAddress);
+			} else {
+
+				final Object waiter = new Object();
+
+				// 线程
+				Thread thread = new Thread() {
+
+					@Override
+					public void run() {
+
+						if (Log.D) {
+							Log.d(TAG, "run() -->> ");
+						}
+
+						wifi.setWifiEnabled(true);// 打开WIFI
+
+						if (Log.D) {
+							Log.d(TAG, "run() setWifiEnabled -->> true");
+						}
+
+						String macAddress = null;
+						int times = 0;
+						while (null == (macAddress = wifi.getConnectionInfo().getMacAddress()) && times < 60) {
+							times++;
+							synchronized (waiter) {
+								try {
+									if (Log.D) {
+										Log.d(TAG, "getMacAddress() wait start 500 -->> ");
+									}
+									waiter.wait(500);
+									if (Log.D) {
+										Log.d(TAG, "getMacAddress() wait end 500 -->> ");
+									}
+								} catch (InterruptedException e) {
+									e.printStackTrace();
+								}
+							}
+						}
+
+						wifi.setWifiEnabled(false);// 关闭WIFI
+
+						if (Log.D) {
+							Log.d(TAG, "run() setWifiEnabled -->> false");
+						}
+
+						if (Log.D) {
+							Log.d(TAG, "getMacAddress() macAddress with open -->> " + macAddress);
+						}
+
+						listener.setMacAddress(macAddress);
+					}
+
+				};
+				thread.start();
+
+			}
+		} catch (Exception e) {
+			listener.setMacAddress(null);
+			e.printStackTrace();
+			if (Log.D) {
+				Log.d(TAG, "getLocalMacAddress exception -->>" + e.getMessage());
+			}
+		}
+	}
+
+	/**
+	 * 取得DeviceId
+	 */
+	public static String getDeviceId() {
+		TelephonyManager tm = (TelephonyManager) MyApplication.getInstance().getSystemService(Context.TELEPHONY_SERVICE);
+		return tm.getDeviceId();
+	}
+
+	/**
+	 * 检测SDcard是否存在
+	 * 
+	 * @return true:存在、false:不存在
+	 */
+	public static boolean checkSDcard() {
+		if (android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * 检查EMAIL地址 用户名和网站名称必须>=1位字符
+	 * */
+	public static boolean checkEmailWithSuffix(String email) {
+		String regex = "^([a-zA-Z0-9_\\-\\.]+)@((\\[[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.)|(([a-zA-Z0-9\\-]+\\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\\]?)$";
+
+		return startCheck(regex, email);
+	}
+
+	public static boolean startCheck(String reg, String string) {
+		boolean tem = false;
+
+		Pattern pattern = Pattern.compile(reg);
+		Matcher matcher = pattern.matcher(string);
+
+		tem = matcher.matches();
+		return tem;
+	}
+
+	/**
+	 * 检验用户名 取值范围为a-z,A-Z,0-9,"_""-",汉字， 用户名有最小长度和最大长度限制，比如用户名必须是4-20位
+	 * */
+	public static boolean checkUsername(String username, int min, int max) {
+		String regex = "[\\w\u4e00-\u9fa5\\-a-zA-Z0-9_]{" + min + "," + max + "}";
+		return startCheck(regex, username);
+	}
+
+	/**
+	 * 检验密码 取值范围为a-z,A-Z,0-9,"_","-"，不能以"_"结尾 用户名有最小长度和最大长度限制，比如密码必须是6-20位 //
+	 * 
+	 * @param password
+	 * @param min
+	 * @param max
+	 * @return
+	 */
+	public static boolean checkPassword(String password, int min, int max) {
+
+		String regex = "[a-zA-Z_0-9\\-]{" + min + "," + max + "}";
+		return startCheck(regex, password);
+	}
+
+	/**
+	 * 检验用户名 取值范围为a-z,A-Z,0-9,"_",汉字，不能以"_"结尾 有最小位数限制的用户名，比如：用户名最少为4位字符
+	 * */
+	public static boolean checkUsername(String username, int min) {
+		// [\\w\u4e00-\u9fa5]{2,}?
+		String regex = "[\\w\u4e00-\u9fa5\\-a-zA-Z0-9_]{" + min + ",}";
+
+		return startCheck(regex, username);
+	}
+
+	/**
+	 * 检验用户名 取值范围为a-z,A-Z,0-9,"_","-",汉字 最少一位字符，最大字符位数无限制
+	 * */
+	public static boolean checkUsername(String username) {
+		String regex = "[\\w\u4e00-\u9fa5\\-a-zA-Z0-9_]+";
+		return startCheck(regex, username);
+	}
+
+	/**
+	 * 检验用户名 取值范围为a-z,A-Z,0-9,"_","-",汉字 最少一位字符，最大字符位数无限制
+	 * */
+	public static boolean checkAddrWithSpace(String username) {
+		String regex = "[\\w\u4e00-\u9fa5\\-\\x20]+";
+		return startCheck(regex, username);
+	}
+
+	/**
+	 * 
+	 * @author YangHuijun
+	 * 
+	 *         Time: 2011-3-4 下午03:25:46
+	 * 
+	 *         Name: 取得字符串的长度
+	 * 
+	 * @return:
+	 * 
+	 *          Description: 取得字符串的长度，中文2个长度，中文以外1个长度
+	 */
+	public static int getLength(String checkStr) {
+		char[] nameChars = checkStr.toCharArray();
+		int length = 0;
+		for (int i = 0; i < nameChars.length; i++) {
+			if (isChinese(nameChars[i])) {
+				length = length + 2;
+			} else {
+				length = length + 1;
+			}
+		}
+		return length;
+	}
+
+	/**
+	 * @author YangHuijun
+	 * 
+	 *         Time: 2011-3-4 下午03:27:42
+	 * 
+	 *         Name: 是否中文
+	 * 
+	 * @return: true-中文 false-非中文
+	 * 
+	 *          Description: 判断给定字符是否中文
+	 */
+	public static boolean isChinese(char c) {
+		Character.UnicodeBlock ub = Character.UnicodeBlock.of(c);
+		if (ub == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS || ub == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS || ub == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A || ub == Character.UnicodeBlock.GENERAL_PUNCTUATION || ub == Character.UnicodeBlock.CJK_SYMBOLS_AND_PUNCTUATION || ub == Character.UnicodeBlock.HALFWIDTH_AND_FULLWIDTH_FORMS) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * 这是谁建的方法，干啥用的？
+	 */
+	public static void backToMain(Context context) {
+		PackageManager pm = context.getPackageManager();
+		ResolveInfo homeInfo = pm.resolveActivity(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0);
+		ActivityInfo ai = homeInfo.activityInfo;
+		Intent startIntent = new Intent(Intent.ACTION_MAIN);
+		startIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+		startIntent.setComponent(new ComponentName(ai.packageName, ai.name));
+		startIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		try {
+			context.startActivity(startIntent);
+		} catch (ActivityNotFoundException e) {
+		} catch (SecurityException e) {
+		}
+	}
+
+	/**
+	 * 取得Mac后，执行的函数
+	 */
+	public interface MacAddressListener {
+
+		void setMacAddress(String macAddress);
+
+	}
+
+	/**
+	 * 得到秒杀key
+	 * 
+	 * @return
+	 */
+	public static String getMiaoShaKey() {
+		return JniUtils.dMK(miaoShaKey);
+	}
+
+	/**
+	 * 设置闹钟启动时间
+	 * 
+	 * @param updateTimes
+	 */
+	public static void putTriggerAtTime(long updateTimes) {
+		final SharedPreferences sp = getJdSharedPreferences();
+		sp.edit().putLong(Constants.SHARED_PREFERENCES_REACTIVATION_ALARM_TRIGGER_AT_TIME, updateTimes).commit();
+	}
+
+	/**
+	 * 获取闹钟启动时间，如果为没有值将返回-1
+	 * 
+	 * @return
+	 */
+	public static long getTriggerAtTime() {
+		final SharedPreferences sp = getJdSharedPreferences();
+		return sp.getLong(Constants.SHARED_PREFERENCES_REACTIVATION_ALARM_TRIGGER_AT_TIME, -1);
+	}
+
+	/**
+	 * 清空闹钟启动时间
+	 */
+	public static void removeTriggerAtTime() {
+		final SharedPreferences sp = getJdSharedPreferences();
+		sp.edit().remove(Constants.SHARED_PREFERENCES_REACTIVATION_ALARM_TRIGGER_AT_TIME).commit();
+	}
+
+	/**
+	 * 得到激活沉默用户的天数,该值由serverConfig接口下时发自动设置上
+	 * 
+	 * @param defalutDays
+	 *            默认值
+	 * @return
+	 */
+	public static long getReActivationIntervalDays(long defalutDays) {
+		long result = defalutDays;
+		final SharedPreferences sp = getJdSharedPreferences();
+		String strIntervalDays = sp.getString(Constants.SHARED_PREFERENCES_REACTIVATION_INTERVAL_DAYS, null);
+		if (!TextUtils.isEmpty(strIntervalDays)) {// 不为空，转换为long
+			try {
+				result = Long.parseLong(strIntervalDays);
+			} catch (Exception e) {
+				if (Log.D) {
+					Log.d(TAG, " -->> getReActivationIntervalDays" + e.getMessage());
+				}
+			}
+		}
+
+		return result;
+	}
+
+
+    public static void setListViewHeightBasedOnChildren(ListView listView) {
+            ListAdapter listAdapter = listView.getAdapter();
+            if (listAdapter == null) {
+                    // pre-condition
+                    return;
+            }
+            int totalHeight = 0;
+            for (int i = 0; i < listAdapter.getCount(); i++) {
+                    View listItem = listAdapter.getView(i, null, listView);
+                    listItem.measure(0, 0);
+                    totalHeight += listItem.getMeasuredHeight();
+            }
+            ViewGroup.LayoutParams params = listView.getLayoutParams();
+            params.height = totalHeight + (listView.getDividerHeight() * (listAdapter.getCount() - 1));
+            listView.setLayoutParams(params);
+    } 
+	/**
+	 * 以下为分类和搜索筛选用
+	 */
+	// 保存记录的省份名称
+	public static void setProvinceNameToSharedPreferences(String provinceName) {
+		getJdSharedPreferences().edit().putString("provinceName", provinceName).commit();
+	}
+
+	// 保存记录的省份id
+	public static void setProvinceIDToSharedPreferences(String provinceID) {
+		getJdSharedPreferences().edit().putString("provinceID", provinceID).commit();
+	}
+
+	// 保存选择的区域码的序号
+	public static void setSelectedOrderSharedPreferences(int selectOrder) {
+		getJdSharedPreferences().edit().putInt("selectOrder", selectOrder).commit();
+	}
+
+	// 保存记住库存的开关状态
+	public static void setRememberStateSharedPreferences(Boolean state) {
+		getJdSharedPreferences().edit().putBoolean("rememberRegion", state).commit();
+	}
+
+	// 保存选择的区域码
+	public static void setRegionSharedPreferences(String region) {
+		getJdSharedPreferences().edit().putString("region", region).commit();
+	}
+
+	public static void setRegionNamePreferences(String name) {
+		getJdSharedPreferences().edit().putString("regionName", name).commit();
+	}
+
+	public static int getSelectedOrderSharedPreferences() {
+		return getJdSharedPreferences().getInt("selectOrder", 0);
+	}
+
+	public static Boolean getRememberStateSharedPreferences() {
+		return getJdSharedPreferences().getBoolean("rememberRegion", false);
+	}
+
+	public static String getRegionNameSharedPreferences() {
+		return getJdSharedPreferences().getString("regionName", "");
+	}
+
+	// --------------------
+
+}

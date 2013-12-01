@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content" >
+
+    <include
+        android:id="@+id/fill_order_title"
+        layout="@layout/head" />
+
+    <ScrollView
+        android:id="@+id/regist_scroller"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/fill_order_title" >
+
+        <LinearLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" >
+
+            <RelativeLayout
+                android:id="@+id/submit_info"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:layout_marginTop="15dp"
+                android:background="@drawable/background_corners"
+                android:padding="10dp" >
+
+                <TextView
+                    android:id="@+id/msg_hint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
+                    android:text="订单已提交，请尽快支付！"
+                    android:textColor="#1A1A1A"
+                    android:textSize="20dp" />
+
+                <TextView
+                    android:id="@+id/order_id"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/msg_hint"
+                    android:layout_marginTop="10dp"
+                    android:paddingLeft="15dp"
+                    android:text="订单号"
+                    android:textColor="#1A1A1A"
+                    android:textSize="15dp" />
+
+                <TextView
+                    android:id="@+id/order_id_content"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/msg_hint"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_toRightOf="@+id/order_id"
+                    android:text=""
+                    android:textColor="#1A1A1A"
+                    android:textSize="15dp" />
+
+                <TextView
+                    android:id="@+id/pay_money"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/order_id"
+                    android:text="订单总价："
+                    android:textColor="#1A1A1A"
+                    android:textSize="15dp" />
+
+                <TextView
+                    android:id="@+id/pay_money_content"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/order_id"
+                    android:layout_marginLeft="10dp"
+                    android:layout_toRightOf="@+id/pay_money"
+                    android:text=""
+                    android:textColor="#1A1A1A"
+                    android:textSize="15dp" />
+
+                <TextView
+                    android:id="@+id/pay_way"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/pay_money"
+                    android:text="支付方式："
+                    android:textColor="#1A1A1A"
+                    android:textSize="15dp" />
+
+                <TextView
+                    android:id="@+id/pay_way_content"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/pay_money"
+                    android:layout_marginBottom="10dp"
+                    android:layout_marginLeft="10dp"
+                    android:layout_toRightOf="@+id/pay_way"
+                    android:text=""
+                    android:textColor="#1A1A1A"
+                    android:textSize="15dp" />
+
+                <TextView
+                    android:id="@+id/create_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/pay_way"
+                    android:layout_marginBottom="10dp"
+                    android:text="创建时间:"
+                    android:textColor="#1A1A1A"
+                    android:textSize="15dp" />
+
+                <TextView
+                    android:id="@+id/create_time_content"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/pay_way"
+                    android:layout_marginBottom="10dp"
+                    android:layout_marginLeft="10dp"
+                    android:layout_toRightOf="@+id/pay_way"
+                    android:text=""
+                    android:textColor="#1A1A1A"
+                    android:textSize="15dp" />
+
+                <TextView
+                    android:id="@+id/complete_no_register_tips"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/pay_way"
+                    android:layout_marginTop="10dp"
+                    android:textColor="#15B815"
+                    android:visibility="gone" />
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/to_order_list_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:layout_marginTop="15dp" >
+
+                <TextView
+                    android:id="@+id/to_order_list"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:text="查看详情"
+                    android:layout_marginLeft="20dp"
+                    android:textColor="#1A1A1A"
+                    android:textSize="15dp" 
+                    android:visibility="gone"/>
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/submit_completed"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:layout_marginTop="15dp"
+                android:padding="10dp" >
+
+                <Button
+                    android:id="@+id/submit_completed_btn"
+                    style="@style/common_button"
+                    android:layout_width="130dp"
+                    android:layout_height="wrap_content"
+                    android:layout_centerHorizontal="true"
+                    android:layout_marginBottom="10dp"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center"
+                    android:text="在线支付"
+                    android:textColor="#1A1A1A"
+                    android:textSize="16dp" />
+            </RelativeLayout>
+        </LinearLayout>
+    </ScrollView>
+
+</RelativeLayout>

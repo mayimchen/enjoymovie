@@ -1,0 +1,275 @@
+package com.jingdong.app.mall.utils;
+
+import java.util.Calendar;
+import java.util.Date;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import android.app.AlarmManager;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.text.TextUtils;
+
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.broadcastReceiver.InterfaceBroadcastReceiver;
+import com.jingdong.app.mall.broadcastReceiver.KillSelfManager;
+import com.jingdong.app.mall.broadcastReceiver.ReActivationUserReceiver;
+import com.jingdong.app.mall.constant.Constants;
+import com.jingdong.app.mall.entity.MessageListItem;
+import com.jingdong.app.mall.utils.HttpGroup.HttpError;
+import com.jingdong.app.mall.utils.HttpGroup.HttpGroupSetting;
+import com.jingdong.app.mall.utils.HttpGroup.HttpGroupaAsynPool;
+import com.jingdong.app.mall.utils.HttpGroup.HttpResponse;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSetting;
+import com.jingdong.app.mall.utils.HttpGroup.OnAllListener;
+
+/**
+ * Copyright 2012 Jingdong Android Mobile Application
+ * 
+ * @author liuweihuan
+ * 
+ *         Time: 2012-06-13
+ * 
+ *         Name: 激活沉默用户功能的管理器
+ * 
+ *         Description: 1、闹钟管理：添加、关闭 2、通知栏管理：发送通知 3、数据获取：得到通知内容
+ */
+public class ReActivationUserManager {
+
+	private final static long ONE_HOUR_FOR_MILLIS = 60 * 60 * 1000;// 1小时，单位毫秒
+	private final static long ONE_DAY_FOR_MILLIS = 24 * ONE_HOUR_FOR_MILLIS;// 1小时，单位毫秒
+	private final static long DEFUALT_RETRY_INTERVAL = 30;// 用户最大沉默时间30天
+
+	private final static int NOTIFICATION_ID = 9999;
+	
+	private final static String TAG = "ReActivationUserManager";
+
+	private Context mContext;
+	private AlarmManager mAlarmManager;
+	private NotificationManager mNotificationManager;
+	private static PendingIntent mPendingIntent;// 只有一个，可准确关闭旧的
+	private HttpGroup httpGroup;
+	private Object killSelfToken = null;// 应用进程是否自杀，只有在手机刚启动，执行完所有操作后才自杀，节省手机电量。
+
+	public ReActivationUserManager(Context context) {
+		this.mContext = context;
+		mAlarmManager = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+		mNotificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
+	}
+
+	/**
+	 * 启动重新激活沉默用户的任务。方法公开
+	 */
+	public void startReActivationUserTask() {
+		// 启动一个指定时长（服务器上次下发）的闹钟，默认30天
+		 startAlarm(CommonUtil.getReActivationIntervalDays(DEFUALT_RETRY_INTERVAL) * ONE_DAY_FOR_MILLIS);
+//		startAlarm(60 * 1000);
+
+	}
+
+	/**
+	 * 按当前时间+指定时间启动闹钟
+	 * 
+	 * @param millis
+	 *            单位毫秒
+	 */
+	private void startAlarm(long millis) {
+
+		long nowMillis = System.currentTimeMillis();
+		long updateTimes = getMillisDoNotDisturb(nowMillis + millis);// 得到避开免打扰时间的毫秒值
+
+		CommonUtil.putTriggerAtTime(updateTimes);
+
+		startAlarmForTriggerAtTime(updateTimes);
+	}
+
+	/**
+	 * 获取时间，避开免打扰时间
+	 * 
+	 * @param millis
+	 * @return
+	 */
+	private long getMillisDoNotDisturb(long millis) {
+		final Calendar c = Calendar.getInstance();
+		c.setTimeInMillis(millis);
+		int hourOfDay = c.get(Calendar.HOUR_OF_DAY);
+		if (hourOfDay < Constants.NOT_NOTIFICATION_HOUR_MIN) {// 小于9点
+			// 加9小时，还在当天
+			c.setTimeInMillis(millis + 9 * ONE_HOUR_FOR_MILLIS);
+
+		} else if (hourOfDay > Constants.NOT_NOTIFICATION_HOUR_MAX) {// 大于21点
+			// 加9+3小时,跳到明天
+			c.setTimeInMillis(millis + 12 * ONE_HOUR_FOR_MILLIS);
+		}
+
+		return c.getTimeInMillis();
+	}
+
+	/**
+	 * 指定闹钟启动时间
+	 * 
+	 * @param triggerAtTime
+	 */
+	private void startAlarmForTriggerAtTime(long triggerAtTime) {
+		Intent intentNew = new Intent(ReActivationUserReceiver.ACTION);// 时间到了就发送个广播
+		intentNew.setClassName(mContext.getPackageName(), ReActivationUserReceiver.class.getName());
+		mPendingIntent = PendingIntent.getBroadcast(mContext, 0, intentNew, PendingIntent.FLAG_CANCEL_CURRENT);
+
+		mAlarmManager.set(AlarmManager.RTC_WAKEUP, triggerAtTime, mPendingIntent);
+	}
+
+	/**
+	 * 在通知栏通知用户，图标、提醒与消息更新功能的一样
+	 */
+	private void showNotification(String title, String content, String createTime) {
+		if (Log.D) {
+			Log.d(TAG, " showNotification -->> title:" + title + "content:" + content + "createTime:" + createTime);
+		}
+		final Notification notification = new Notification(R.drawable.android_jd_notification, content, System.currentTimeMillis());
+		// 打开应用
+		Intent intent = InterfaceBroadcastReceiver.createIntent(InterfaceBroadcastReceiver.MODULE_ID_MESSAGE, null);
+		JSONObject obj = new JSONObject();
+
+		try {
+			obj.put(MessageListItem.CREATED_KEY, createTime);
+			obj.put(MessageListItem.CONTENT_KEY, content);
+			obj.put(MessageListItem.TYPE_KEY, new Integer(Constants.MESSAGE_TYPE_REACTIVATION).toString()); //4是沉默用户激活，类似站内通知
+			obj.put(MessageListItem.TITLE_KEY, title);
+			// 保存msgId到XML文件，在消息详情页显示;
+			CommonUtil.getJdSharedPreferences().edit().putString(Constants.SERVICE_TO_ACTIVIATE_MESSAGE, obj.toString()).commit();
+		} catch (JSONException e) {
+			e.printStackTrace();
+		}
+
+		PendingIntent contentIntent = PendingIntent.getBroadcast(mContext, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+		notification.flags = Notification.FLAG_AUTO_CANCEL | Notification.FLAG_INSISTENT;// 重复发出声音，直到用户响应此通知 ;在通知栏上点击此通知后自动清除此通知
+		notification.setLatestEventInfo(mContext, title, content, contentIntent);
+		mNotificationManager.notify(NOTIFICATION_ID, notification);
+	}
+
+	@SuppressWarnings("unused")
+	private void closeAlarm() {
+		if (mAlarmManager != null) {
+			mAlarmManager.cancel(mPendingIntent);
+			CommonUtil.removeTriggerAtTime();
+		}
+	}
+
+	/**
+	 * 从服务器请求向沉默用户通知的内容： 1、如果请求失败，5小时后再试，并跳过防打扰时间。 2、得到数据后，发送通知，并再次启动激活沉默用户的闹钟。
+	 */
+	public void requestNotifys() {
+
+		OnAllListener onAllListener = new HttpGroup.CustomOnAllListener() {
+
+			@Override
+			public void onProgress(int max, int progress) {
+			}
+
+			@Override
+			public void onError(HttpError error) {
+				if (Log.D) {
+					Log.d(TAG, " requestNotifys -->> onError");
+				}
+				//失败后，连网不上，向用户弹出定好的方案通知用户，并且循环下次闹钟。
+				showNotification(mContext.getResources().getString(R.string.reactivation_default_message_title), 
+						mContext.getResources().getString(R.string.reactivation_default_message_content),
+						FormatUtils.formatDate(new Date()));
+
+				// 再次启动30天的
+				startReActivationUserTask();
+				if (Log.D) {
+					Log.d(TAG, " requestNotifys -->> onError startReActivationUserTask finish");
+				}
+				
+				// 如果是新开机，要自杀
+				killSelf();
+			}
+
+			@Override
+			public void onEnd(HttpResponse httpResponse) {
+				JSONObjectProxy jsonObject = httpResponse.getJSONObject().getJSONObjectOrNull("message");
+				if (null != jsonObject) {
+					final String title = jsonObject.getStringOrNull("title");
+					final String createTime = jsonObject.getStringOrNull("created");
+					final String content = jsonObject.getStringOrNull("content");
+					if (!TextUtils.isEmpty(title) && !TextUtils.isEmpty(content)) {
+						showNotification(title, content, createTime);
+					}
+				}
+
+				// 再次启动30天的
+				startReActivationUserTask();
+
+				if (Log.D) {
+					Log.d(TAG, " requestNotifys -->> onEnd startReActivationUserTask finish");
+				}
+				// 如果是新开机，要自杀
+				killSelf();
+			}
+
+			@Override
+			public void onStart() {
+			}
+		};
+
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setFunctionId("activationMessage");
+		httpSetting.setListener(onAllListener);
+		httpSetting.setNotifyUser(false);
+		httpSetting.setNeedGlobalInitialization(false);
+
+		if (httpGroup == null) {
+			HttpGroupSetting setting = new HttpGroupSetting();
+			setting.setPriority(HttpGroupSetting.PRIORITY_JSON);
+			setting.setType(HttpGroupSetting.TYPE_JSON);
+			httpGroup = new HttpGroupaAsynPool(setting);
+		}
+		httpGroup.add(httpSetting);
+	}
+
+	/**
+	 * 检测闹钟是否过期，如果过期，将发送通知，否则重新启动闹钟。最后杀进程
+	 */
+	public void checkOverdueAlarmForBoot() {
+
+		long triggerAtTime = CommonUtil.getTriggerAtTime();
+		if (triggerAtTime != -1) {
+			if (System.currentTimeMillis() > triggerAtTime) {// 超时了
+				// 发送通知
+				requestNotifys();
+			} else {// 没有超时，重新设置闹钟
+				startAlarmForTriggerAtTime(triggerAtTime);
+				killSelf();
+			}
+		} else {
+			killSelf();
+		}
+	}
+
+	public void setKillSelfToken(Object killSelfToken) {
+		if (Log.D) {
+			Log.d(TAG, "setKillSelfToken killSelfToken:" + killSelfToken);
+		}
+		this.killSelfToken = killSelfToken;
+	}
+
+	/**
+	 * 开机启动的进程自杀，如果有后台，将不关后台
+	 */
+	private void killSelf() {
+		if (Log.D) {
+			Log.d(TAG, " killSelf -->>  killSelfToken" + killSelfToken);
+		}
+		if (null != killSelfToken) {
+			KillSelfManager.killSelf(killSelfToken);
+			killSelfToken = null;
+		}
+	}
+
+}

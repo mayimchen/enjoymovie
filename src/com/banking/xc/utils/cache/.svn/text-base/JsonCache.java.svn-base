@@ -1,0 +1,23 @@
+package com.jingdong.app.mall.utils.cache;
+
+import java.util.HashMap;
+
+import com.jingdong.app.mall.utils.JSONObjectProxy;
+
+public class JsonCache {
+
+	protected static HashMap<String, JSONObjectProxy> jsonCache = new HashMap<String, JSONObjectProxy>();
+
+	public static synchronized boolean containsKey(Object key) {
+		return jsonCache.containsKey(key);
+	}
+
+	public static synchronized JSONObjectProxy get(String key) {
+		return jsonCache.get(key);
+	}
+
+	public static synchronized void put(String key, JSONObjectProxy value) {
+		jsonCache.put(key, value);
+	}
+
+}

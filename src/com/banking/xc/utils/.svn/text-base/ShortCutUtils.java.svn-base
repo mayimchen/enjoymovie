@@ -1,0 +1,252 @@
+package com.jingdong.app.mall.utils;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.AlertDialog.Builder;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+
+import com.jingdong.app.mall.MainActivity;
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.constant.Constants;
+
+public class ShortCutUtils {
+
+	/**
+	 * 添加到Shortcut选项中（默认桌面上长按调出）
+	 * 
+	 * @param activity
+	 * @param pakageName
+	 * @param className
+	 * @param shortcutName
+	 * @param icon
+	 * @param duplicate
+	 * 
+	 *            同时需要在manifest中为activity提供一个包含 action="android.intent.action.CREATE_SHORTCUT"的intent-filter
+	 */
+	public static void addShortcutToOptions(Activity activity, String pakageName, String className, String shortcutName, Drawable icon, boolean duplicate) {
+		Intent shortcut = new Intent();
+
+		String label = shortcutName;
+		BitmapDrawable iconBitmapDrawabel = (BitmapDrawable) icon;
+
+		// 获取应用基本信息
+		PackageManager packageManager = activity.getPackageManager();
+		try {
+			ApplicationInfo appInfo = packageManager.getApplicationInfo(pakageName, PackageManager.GET_META_DATA | PackageManager.GET_UNINSTALLED_PACKAGES);
+			if (label == null) {
+				label = packageManager.getApplicationLabel(appInfo).toString();
+			}
+			if (iconBitmapDrawabel == null) {
+				iconBitmapDrawabel = (BitmapDrawable) packageManager.getApplicationIcon(appInfo);
+			}
+		} catch (NameNotFoundException e) {
+			e.printStackTrace();
+			// Toast.makeText(activity, e.toString(), Toast.LENGTH_SHORT);
+			return;
+		}
+
+		// 设置属性
+		shortcut.putExtra(Intent.EXTRA_SHORTCUT_NAME, label);
+		shortcut.putExtra(Intent.EXTRA_SHORTCUT_ICON, iconBitmapDrawabel.getBitmap());
+
+		// 设置启动程序
+		ComponentName comp = new ComponentName(pakageName, className);
+		shortcut.putExtra(Intent.EXTRA_SHORTCUT_INTENT, new Intent(Intent.ACTION_MAIN).setComponent(comp));
+
+		activity.setResult(Activity.RESULT_OK, shortcut);
+	}
+
+	static final String ACTION_INSTALL = "com.android.launcher.action.INSTALL_SHORTCUT";
+	static final String ACTION_UNINSTALL = "com.android.launcher.action.UNINSTALL_SHORTCUT";
+
+	/**
+	 * 添加快捷方式到桌面
+	 * 
+	 * @param context
+	 * @param pakageName
+	 * @param className
+	 * @param shortcutName
+	 *            可手动指定快捷方式的名称，删除时也要一致。null则使用默认名称
+	 * @param icon
+	 *            手动指定快捷方式的图标，null则使用默认图标
+	 * @param duplicate
+	 * 
+	 *            同时需要在manifest中设置以下权限： <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
+	 */
+	public static void addShortcutToDesktop(Context context, String pakageName, String className, String shortcutName, Drawable icon, boolean duplicate) {
+		Intent shortcut = new Intent(ACTION_INSTALL);
+
+		String label = shortcutName;
+		BitmapDrawable iconBitmapDrawabel = (BitmapDrawable) icon;
+
+		// 获取应用基本信息
+		PackageManager packageManager = context.getPackageManager();
+		try {
+			ApplicationInfo appInfo = packageManager.getApplicationInfo(pakageName, PackageManager.GET_META_DATA | PackageManager.GET_ACTIVITIES);
+			if (label == null) {
+				label = packageManager.getApplicationLabel(appInfo).toString();
+			}
+			if (iconBitmapDrawabel == null) {
+				iconBitmapDrawabel = (BitmapDrawable) packageManager.getApplicationIcon(appInfo);
+			}
+		} catch (NameNotFoundException e) {
+			e.printStackTrace();
+			// Toast.makeText(context, e.toString(), Toast.LENGTH_SHORT);
+			return;
+		}
+
+		// 设置属性
+		shortcut.putExtra(Intent.EXTRA_SHORTCUT_NAME, label);
+		shortcut.putExtra(Intent.EXTRA_SHORTCUT_ICON, iconBitmapDrawabel.getBitmap());
+
+		// 是否允许重复创建
+		shortcut.putExtra("duplicate", duplicate);
+
+		// 设置启动程序
+		ComponentName comp = new ComponentName(pakageName, "." + className);
+		Intent launcherIntent = new Intent(Intent.ACTION_MAIN);
+		launcherIntent.setComponent(comp);
+		shortcut.putExtra(Intent.EXTRA_SHORTCUT_INTENT, new Intent(Intent.ACTION_MAIN).setComponent(comp));
+
+		context.sendBroadcast(shortcut);
+	}
+
+	/**
+	 * 删除桌面快捷方式
+	 * 
+	 * @param context
+	 * @param pakageName
+	 * @param className
+	 * @param shortcutName
+	 *            如果当初制定的快捷方式名称并非应用名，请手动指定，否则无法删除。null则使用默认名称
+	 * 
+	 *            同时需要在manifest中设置以下权限： <uses-permission android:name="com.android.launcher.permission.UNINSTALL_SHORTCUT" />
+	 */
+	public static void delShortcutFromDesktop(Context context, String pakageName, String className, String shortcutName) {
+		Intent shortcut = new Intent(ACTION_UNINSTALL);
+
+		String label = shortcutName;
+
+		// 获取应用基本信息
+		PackageManager packageManager = context.getPackageManager();
+		try {
+			ApplicationInfo appInfo = packageManager.getApplicationInfo(pakageName, PackageManager.GET_META_DATA | PackageManager.GET_UNINSTALLED_PACKAGES);
+			if (label == null) {
+				label = packageManager.getApplicationLabel(appInfo).toString();
+			}
+		} catch (NameNotFoundException e) {
+			e.printStackTrace();
+			// Toast.makeText(context, e.toString(), Toast.LENGTH_SHORT);
+			return;
+		}
+
+		// 设置属性
+		shortcut.putExtra(Intent.EXTRA_SHORTCUT_NAME, label);
+
+		// 设置启动程序
+		ComponentName comp = new ComponentName(pakageName, className);
+		shortcut.putExtra(Intent.EXTRA_SHORTCUT_INTENT, new Intent(Intent.ACTION_MAIN).setComponent(comp));
+
+		context.sendBroadcast(shortcut);
+	}
+
+	/**
+	 * 为客户端生成一个桌面快捷方式，另外添加到Shortcut选项中（默认桌面上长按调出）
+	 * 
+	 * @param context
+	 *            传进来的应该是main LAUNCHER Activity
+	 */
+	public static void addSortcutForJdApp(final MainActivity context) {
+		final SharedPreferences defaltPreference = CommonUtil.getJdSharedPreferences();
+		final String packageName = context.getPackageName();
+		final String className = context.getLocalClassName();
+		Builder builder = new Builder(context);
+		builder.setTitle(R.string.add_shortcut_dialog_title);
+		builder.setMessage(context.getText(R.string.add_shortcut_dialog_message));
+		builder.setPositiveButton(context.getText(R.string.ok), new AlertDialog.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+				addShortcut(context, packageName, className, null, null, false);
+				dialog.dismiss();
+			}
+		});
+		builder.setNegativeButton(context.getString(R.string.cancel), new AlertDialog.OnClickListener() {
+
+			@Override
+			public void onClick(DialogInterface dialog, int which) {
+
+				dialog.dismiss();
+			}
+
+		});
+		AlertDialog alertDialog = builder.create();
+		// alertDialog.setOnDismissListener(new OnDismissListener() {
+		//
+		// @Override
+		// public void onDismiss(DialogInterface dialog) {
+		// // defaltPreference.edit().putBoolean(Constant.ADD_SHORT_CUT_FLAG, true).commit();
+		// dialog.dismiss();
+		//
+		// }
+		// });
+		alertDialog.show();
+		// addShortcutToDesktop(context, packageName, className, null, null, false);
+		// Toast.makeText(context, context.getText(R.string.add_shortcut_dialog_success), Toast.LENGTH_SHORT).show();
+		defaltPreference.edit().putBoolean(Constants.ADD_SHORT_CUT_FLAG, true).commit();
+		addShortcutToOptions(context, packageName, className, null, null, false);
+	}
+
+	/**
+	 * @Title: addShortcut
+	 * @Description: 添加快捷方式
+	 * @param @param activity
+	 * @param @param pakageName
+	 * @param @param className
+	 * @param @param shortcutName
+	 * @param @param icon
+	 * @param @param duplicate
+	 * @return void
+	 * @throws
+	 */
+	public static void addShortcut(Activity activity, String pakageName, String className, String shortcutName, Drawable icon, boolean duplicate) {
+		Intent localIntent = new Intent("android.intent.action.MAIN");
+		localIntent.setClassName(activity, pakageName + ".MainActivity");// your first launch activity
+		localIntent.addCategory("android.intent.category.LAUNCHER");
+		localIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+		localIntent.addFlags(Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+
+		String label = shortcutName;
+		int appIcon = 0;
+		// 获取应用基本信息
+		PackageManager packageManager = activity.getPackageManager();
+		try {
+			ApplicationInfo appInfo = packageManager.getApplicationInfo(pakageName, PackageManager.GET_META_DATA | PackageManager.GET_UNINSTALLED_PACKAGES);
+			if (label == null) {
+				label = packageManager.getApplicationLabel(appInfo).toString();
+			}
+			appIcon = appInfo.icon;
+		} catch (NameNotFoundException e) {
+			e.printStackTrace();
+			// Toast.makeText(activity, e.toString(), Toast.LENGTH_SHORT);
+			return;
+		}
+
+		Intent shortcut = new Intent();
+		shortcut.putExtra("android.intent.extra.shortcut.INTENT", localIntent);
+		shortcut.putExtra("android.intent.extra.shortcut.NAME", label);
+		Intent.ShortcutIconResource localShortcutIconResource = Intent.ShortcutIconResource.fromContext(activity, appIcon/* R.drawable.jd_buy_icon */);// your icon file
+		shortcut.putExtra("android.intent.extra.shortcut.ICON_RESOURCE", localShortcutIconResource);
+		shortcut.putExtra("duplicate", duplicate);
+		shortcut.setAction("com.android.launcher.action.INSTALL_SHORTCUT");
+		activity.sendBroadcast(shortcut);
+	}
+}

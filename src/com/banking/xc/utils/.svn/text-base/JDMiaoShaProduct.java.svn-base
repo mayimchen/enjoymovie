@@ -1,0 +1,243 @@
+package com.jingdong.app.mall.utils;
+
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.os.Bundle;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.TextUtils;
+import android.text.style.ForegroundColorSpan;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import com.jingdong.app.mall.R;
+import com.jingdong.app.mall.entity.Product;
+import com.jingdong.app.mall.entity.SourceEntity;
+import com.jingdong.app.mall.product.ProductDetailActivity;
+import com.jingdong.app.mall.utils.HttpGroup.HttpError;
+import com.jingdong.app.mall.utils.HttpGroup.HttpGroupSetting;
+import com.jingdong.app.mall.utils.HttpGroup.HttpResponse;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSetting;
+import com.jingdong.app.mall.utils.ImageUtil.InputWay;
+
+public class JDMiaoShaProduct {
+	public static final String TAG = "JDMiaoSha";
+
+	private MyActivity context;
+
+	private TextView name, miaoShaPrice, jdPrice, rate;
+	private ImageView icon;
+	private Button btnMiaoSha;
+	private LinearLayout bottomLayout;
+	private View item;
+	private View sale;
+	private String oldIconUrl = "data";
+
+	public JDMiaoShaProduct(MyActivity context) {
+		this.context = context;
+		initView();
+	}
+
+	private void initView() {
+		if (item == null) {
+			item = ImageUtil.inflate(R.layout.app_limit_buy_product_item, null);
+		}
+		name = (TextView) item.findViewById(R.id.limit_buy_product_item_name);
+		// adword = (TextView) item.findViewById(R.id.limit_buy_product_item_adword);
+		miaoShaPrice = (TextView) item.findViewById(R.id.limit_buy_product_item_jdPrice);
+		icon = (ImageView) item.findViewById(R.id.limit_buy_product_item_image);
+		bottomLayout = (LinearLayout) item.findViewById(R.id.limit_buy_product_item_bottom);
+
+		sale = ImageUtil.inflate(R.layout.app_limit_buy_sale, null);
+		jdPrice = (TextView) sale.findViewById(R.id.app_limit_buy_sale_text_jdPrice);
+		rate = (TextView) sale.findViewById(R.id.app_limit_buy_sale_text_discount);
+
+		btnMiaoSha = new Button(context);
+	}
+
+	public void bindData(final Product product) {
+		bindData(product, null);
+	}
+
+	public void bindData(final Product product, OnClickListener listener) {
+		btnMiaoSha.setTag(product.getId());
+		final long startRemainTime = product.getStartTime();
+		final long endRemainTime = product.getEndTime();
+		boolean isFinish = false;
+		if (startRemainTime > 0) {
+			btnMiaoSha.setBackgroundResource(R.drawable.app_limit_buy_btn_begin);
+		} else if (endRemainTime > 0 && startRemainTime < 0) {
+			btnMiaoSha.setBackgroundResource(R.drawable.app_limit_buy_btn_immediately_selector);
+		} else if (endRemainTime <= 0 && startRemainTime <= 0) {
+			miaoShaPrice.setText(R.string.limit_buy_time_finish);
+			btnMiaoSha.setVisibility(View.GONE);
+			isFinish = true;
+		}
+		try {
+			final String name_Adword = product.getName() + " " + product.getAdWord();
+			name.setText(highlight(name_Adword, Color.RED, product.getName().length(), name_Adword.length()));
+		} catch (Exception e) {
+			e.printStackTrace();
+			final String _name = product.getName();
+			if(!TextUtils.isEmpty(_name)){
+				name.setText(_name);
+			}
+		}
+		if (product.getCanBuy() && !isFinish) {
+			if (bottomLayout.indexOfChild(sale) == -1) {
+				final LinearLayout.LayoutParams params1 = new LinearLayout.LayoutParams(DPIUtil.dip2px(200), DPIUtil.dip2px(50));
+				bottomLayout.addView(sale, params1);
+			}
+			if (bottomLayout.indexOfChild(btnMiaoSha) == -1) {
+				final LinearLayout.LayoutParams params2 = new LinearLayout.LayoutParams(DPIUtil.dip2px(86), DPIUtil.dip2px(32));
+				params2.setMargins(DPIUtil.dip2px(2), 0, DPIUtil.dip2px(2), 0);
+				bottomLayout.addView(btnMiaoSha, params2);
+			}
+			final String price = context.getResources().getString(R.string.limit_buy_product_price) + product.getMiaoShaPrice();
+			miaoShaPrice.setText(highlight(price, Color.BLACK, 0, 4));
+			jdPrice.setText(product.getJdPrice());
+			rate.setText(product.getRate());
+		} else {
+			String message = product.getMessage();
+			if (TextUtils.isEmpty(message)) {
+				message = context.getString(R.string.limit_buy_sold_out);
+			}
+			miaoShaPrice.setText(message);
+		}
+
+		setDrawable(icon, product.getImageUrl());
+
+		if (listener == null) {
+			final OnClickListener onClickListener = new OnClickListener() {
+				@Override
+				public void onClick(View v) {// 跳转商品详情
+					if (product.getId() != null) {
+						final long id = product.getId();
+						Intent intent = new Intent(context, ProductDetailActivity.class);
+						Bundle bundle = new Bundle();
+						bundle.putLong("id", id);// 商品id
+						intent.putExtras(bundle);
+						if(sourceEntity != null){
+							intent.putExtra(SourceEntity.INTENT_EXTRA_ARG_SOURCE, sourceEntity);
+						}
+						context.startActivityInFrame(intent);
+					}
+				}
+			};
+			btnMiaoSha.setOnClickListener(onClickListener);
+			item.setOnClickListener(onClickListener);
+		} else {
+			btnMiaoSha.setOnClickListener(listener);
+			item.setOnClickListener(listener);
+		}
+	}
+	
+	private SourceEntity sourceEntity;
+	
+	public void setSourceEntity(SourceEntity sourceEntity){
+		this.sourceEntity = sourceEntity;
+	}
+	
+	public SpannableStringBuilder highlight(String text, int color, int start, int end) {
+		SpannableStringBuilder spannable = new SpannableStringBuilder(text);// 用于可变字符串
+		ForegroundColorSpan span = new ForegroundColorSpan(color);
+		spannable.setSpan(span, start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+		return spannable;
+	}
+
+	public Button getMiaoShaProductButton() {
+		return btnMiaoSha;
+	}
+
+	/**
+	 * 秒杀商品item
+	 * 
+	 * @param context
+	 * @param product
+	 * @param item
+	 * @return
+	 */
+	public View getProductItem() {
+		return item;
+	}
+
+	public void setProductStyle(final int what) {
+		switch (what) {
+		case JDMiaoSha.MIAOSHA_WILLBEGIN:
+			btnMiaoSha.setBackgroundResource(R.drawable.app_limit_buy_btn_immediately_selector);
+			break;
+		}
+	}
+
+	/**
+	 * 加载商品图片
+	 * 
+	 * @param context
+	 * @param icon
+	 * @param url
+	 */
+	public void setDrawable(final ImageView icon, String url) {
+		if (TextUtils.isEmpty(url) || TextUtils.isEmpty(oldIconUrl) || url.equals(oldIconUrl)) {
+			return;
+		}
+		oldIconUrl = url;
+		icon.setImageDrawable(new ExceptionDrawable(context, context.getResources().getString(R.string.loading)));
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setUrl(url);
+		httpSetting.setType(HttpGroupSetting.TYPE_IMAGE);
+		httpSetting.setEffect(HttpSetting.EFFECT_NO);
+		httpSetting.setListener(new HttpGroup.OnAllListener() {
+
+			@Override
+			public void onProgress(int max, int progress) {
+
+			}
+
+			@Override
+			public void onError(HttpError error) {
+				if (Log.D) {
+					Log.d(TAG, " -->> " + error.getErrorCodeStr());
+				}
+				context.post(new Runnable() {
+					@Override
+					public void run() {
+						icon.setImageDrawable(new ExceptionDrawable(context, context.getResources().getString(R.string.no_image)));
+					}
+				});
+			}
+
+			@Override
+			public void onEnd(HttpResponse httpResponse) {
+				if (Log.D) {
+					Log.d(TAG, " -->> onEnd");
+				}
+				Bitmap bitmap = ImageUtil.createBitmap(InputWay.createInputWay(httpResponse) , 0, 0);
+				final Drawable drawable = new BitmapDrawable(bitmap);
+				context.post(new Runnable() {
+					@Override
+					public void run() {
+						if (drawable != null) {
+							icon.setImageDrawable(drawable);
+						} else {
+							icon.setImageDrawable(new ExceptionDrawable(context, context.getResources().getString(R.string.no_image)));
+						}
+					}
+				});
+
+			}
+
+			@Override
+			public void onStart() {
+
+			}
+		});
+		context.getHttpGroupaAsynPool().add(httpSetting);
+	}
+}

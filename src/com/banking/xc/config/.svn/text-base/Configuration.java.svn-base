@@ -1,0 +1,270 @@
+package com.jingdong.app.mall.config;
+
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
+import android.content.SharedPreferences;
+import android.text.TextUtils;
+
+import com.jingdong.app.mall.constant.Constants;
+import com.jingdong.app.mall.utils.CommonUtil;
+import com.jingdong.app.mall.utils.Log;
+
+public class Configuration {
+
+	private static Properties properties;
+	private static Map<String, String> localProperties;
+
+	// Key
+	public static final String PAI_HOST = "paiHost"; // 拍照购服务端
+	public static final String HOST = "host";// 服务后端
+	public static final String M_HOST = "mHost";// 服务前端
+	public static final String MSG_HOST = "msgHost";// 消息系统域名
+	public static final String END_HOST = "endHost";// 服务前端（后缀）
+	public static final String CONNECT_TIMEOUT = "connectTimeout";// 连接超时
+	public static final String CONNECT_TIMEOUT_FOR_WIFI = "connectTimeoutForWIFI";// 连接超时
+	public static final String READ_TIMEOUT = "readTimeout";// 读取超时
+	public static final String READ_TIMEOUT_FOR_WIFI = "readTimeoutForWIFI";// 读取超时
+	public static final String ATTEMPTS = "attempts";// 尝试次数
+	public static final String ATTEMPTS_TIME = "attemptsTime";// 尝试的间隔时间
+	public static final String REQUEST_METHOD = "requestMethod";// 网络请求方式
+
+	public static final String LOCAL_MEMORY_CACHE = "localMemoryCache";// 本地文件缓存
+	public static final String LOCAL_FILE_CACHE = "localFileCache";// 本地内存缓存
+
+	public static final String INIT_FIRST_POOL_SIZE = "initFirstPoolSize";// 第一线程池：最少非网络线程池
+	public static final String MAX_FIRST_POOL_SIZE = "maxFirstPoolSize";// 第一线程池：最大非网络线程池
+	public static final String INIT_SECOND_POOL_SIZE = "initSecondPoolSize";// 第二线程池：最少网络线程池数量(json)
+	public static final String MAX_SECOND_POOL_SIZE = "maxSecondPoolSize";// 第二线程池：最大网络线程池数量(json)
+	public static final String INIT_THIRD_POOL_SIZE = "initThirdPoolSize";// 第三线程池：最少网络线程池数量(image、file)
+	public static final String MAX_THIRD_POOL_SIZE = "maxThirdPoolSize";// 第三线程池：最大网络线程池数量(image、file)
+
+	public static final String DISCUSSUPLOADIMAGE_WIDTH = "discussUploadImageWidth";// 晒单上传图片宽度上限
+	public static final String DISCUSSUPLOADIMAGE_HEIGHT = "discussUploadImageHeight";// 晒单上传图片高度上限
+	public static final String DISCUSSUPLOADIMAGE_QUALITY = "discussUploadImageQuality";// 晒单上传图片质量
+
+	public static final String ROUTINE_CHECK_DELAY_TIME = "routineCheckDelayTime";// 例行检查延迟时间
+
+	public static final String LEAVE_TIME_GAP = "leaveTimeGap";// 例行检查延迟时间
+
+	public static final String PRINT_LOG = "printLog";// 日志开关
+	public static final String DEBUG_LOG = "debugLog";// 日志开关
+	public static final String VIEW_LOG = "viewLog";// 日志开关
+	public static final String ERROR_LOG = "errorLog";// 日志开关
+	public static final String INFO_LOG = "infoLog";// 日志开关
+	public static final String WARN_LOG = "warnLog";// 日志开关
+
+	public static final String TEST_MODE = "testMode";// 测试开关
+	public static final String PRINT_JLOG = "useJLog";//JLog开关
+	public static final String PARTNER = "partner";// 合作伙伴
+	public static final String CBTMODE = "CBTMode";// 内测模式，可以设置中更改host
+
+	public static final String UNION_ID = "unionId";// CPS
+	public static final String SUB_UNION_ID = "subunionId";// CPS
+
+	public static final String APPLICATION_UPGRADE = "applicationUpgrade";// 升级检查开关
+
+	public static final String APPLICATION_SHORTCUT = "applicationShortcut";// 快捷方式开关
+
+	public static final String COST_HINT = "costHint";// 流量提示开关
+
+	public static final String DEFAULT_PUSH_MESSAGE_ALARM_DELAY = "defaultPushMessageAlarmDelay"; // 默认的闹钟提醒时间间隔
+	public static final String DEFAULT_FIRST_GET_TOKEN_DELAY = "defaultFirstGetTokenDelay"; // 首次启动时默认获取Token的间隔时间
+
+	/**
+	 * 拍照开关
+	 */
+	public static final String PHOTO_SHUT = "photoShut";
+
+	/**
+	 * 条码扫描开关
+	 */
+	public static final String BARCODE_SCAN = "barCodeScan";
+
+	/**
+	 * 语音搜索开关
+	 */
+	public static final String VOICE_SEARCH_SHUT = "voiseSearchShut";
+
+	/**
+	 * 酷派合作标志
+	 */
+	public static final String IS_COOLMART = "isCoolMart";
+	
+	/**
+	 * 闹钟是否需要唤醒硬件 
+	 */
+	public static final String ALARM_NEED_WAKE_UP = "alarmNeedWakeUp";
+
+	static {
+		localProperties = new HashMap<String, String>();
+
+		// 内置配置
+		localProperties.put(PAI_HOST, "pai.m.360buy.com");// 拍照购服务端
+		localProperties.put(HOST, "gw.m.360buy.com");// 服务后端
+		localProperties.put(M_HOST, null);// 服务前端
+		localProperties.put(END_HOST, "360buy.com");// 服务前端（后缀）
+		localProperties.put(MSG_HOST, "jpns.m.360buy.com");// 消息系统域名
+		localProperties.put(CONNECT_TIMEOUT, "" + 40 * 1000);// 连接超时
+		localProperties.put(CONNECT_TIMEOUT_FOR_WIFI, "" + 30 * 1000);// 连接超时
+		localProperties.put(READ_TIMEOUT, "" + 40 * 1000);// 读取超时
+		localProperties.put(READ_TIMEOUT_FOR_WIFI, "" + 30 * 1000);// 读取超时
+		localProperties.put(ATTEMPTS, "" + 3);// 尝试次数
+		localProperties.put(ATTEMPTS_TIME, "" + 0);// 尝试的间隔时间
+		localProperties.put(REQUEST_METHOD, "post");// 网络请求方式
+
+		localProperties.put(LOCAL_MEMORY_CACHE, "false");// 本地文件缓存
+		localProperties.put(LOCAL_FILE_CACHE, "false");// 本地内存缓存
+
+		localProperties.put(INIT_FIRST_POOL_SIZE, "" + 5);// 第一线程池：最少非网络线程池
+		localProperties.put(MAX_FIRST_POOL_SIZE, "" + 5);// 第一线程池：最大非网络线程池
+		localProperties.put(INIT_SECOND_POOL_SIZE, "" + 3);// 第二线程池：最少网络线程池(json)
+		localProperties.put(MAX_SECOND_POOL_SIZE, "" + 3);// 第二线程池：最大网络线程池(json)
+		localProperties.put(INIT_THIRD_POOL_SIZE, "" + 3);// 第三线程池：最少网络线程池(image、file)
+		localProperties.put(MAX_THIRD_POOL_SIZE, "" + 3);// 第三线程池：最大网络线程池(image、file)
+
+		localProperties.put(DISCUSSUPLOADIMAGE_WIDTH, "" + 500);// 晒单上传图片宽度上限
+		localProperties.put(DISCUSSUPLOADIMAGE_HEIGHT, "" + 500);// 晒单上传图片高度上限
+		localProperties.put(DISCUSSUPLOADIMAGE_QUALITY, "" + 80);// 晒单上传图片质量
+
+		localProperties.put(ROUTINE_CHECK_DELAY_TIME, "" + (1000 * 2));// 例行检查延迟时间
+
+		localProperties.put(LEAVE_TIME_GAP, "" + (1000 * 60 * 30));// 用户离开时间阀值
+
+		localProperties.put(DEFAULT_FIRST_GET_TOKEN_DELAY, "" + (1000 * 60 * 3)); // 首次进入应用间隔3分钟去获取消息的token
+		localProperties.put(DEFAULT_PUSH_MESSAGE_ALARM_DELAY, "" + (1000 * 60 * 10)); // 默认获取消息的间隔时间为10分钟
+
+		localProperties.put(PRINT_LOG, "false");// 日志开关
+		localProperties.put(DEBUG_LOG, "true");// 日志开关
+		localProperties.put(VIEW_LOG, "true");// 日志开关
+		localProperties.put(ERROR_LOG, "true");// 日志开关
+		localProperties.put(INFO_LOG, "true");// 日志开关
+		localProperties.put(WARN_LOG, "true");// 日志开关
+
+		localProperties.put(TEST_MODE, "false");// 测试开关
+		localProperties.put(PRINT_JLOG, "false");//jLog开关
+		localProperties.put(CBTMODE, "false");//内测开关
+		// 发布需要修改的字段
+		localProperties.put(PARTNER, "jingdong");// 合作伙伴
+
+		localProperties.put(UNION_ID, null);// CPS
+		localProperties.put(SUB_UNION_ID, null);// CPS
+		localProperties.put(APPLICATION_UPGRADE, "true");// 自动升级检查开关
+		localProperties.put(APPLICATION_SHORTCUT, "true");// 快捷方式开关
+		localProperties.put(COST_HINT, "false");// 流量提示开关
+		localProperties.put(BARCODE_SCAN, "true");// 条码扫描开关
+
+		// e人e本需求的关闭照相和语音搜索功能
+		localProperties.put(PHOTO_SHUT, "false");
+		localProperties.put(VOICE_SEARCH_SHUT, "false");
+
+		// 酷派合作标志
+		localProperties.put(IS_COOLMART, "false");
+
+		try {
+			InputStream inputStream = Configuration.class.getClassLoader().getResourceAsStream("config.properties");
+			if (null != inputStream) {
+				properties = new Properties();
+				properties.load(inputStream);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static String getProperty(String key) {
+		return getProperty(key, null);
+	}
+
+	public static String getProperty(String key, String defaultValue) {
+		String result = null;
+		if (null != properties) {
+			result = properties.getProperty(key);
+		}
+		if (null == result) {
+			result = localProperties.get(key);
+		}
+		if (null == result) {
+			result = defaultValue;
+		}
+		if(Log.D) {
+			Log.d("Configuration", "getProperty-->"+result);
+		}
+		return result;
+	}
+	public static void setTestModeProperty(Boolean value) {
+		if(value) {
+			properties.setProperty(TEST_MODE, "true");
+		} else {
+			properties.setProperty(TEST_MODE, "false");
+		}
+		final SharedPreferences defaltPreference = CommonUtil.getJdSharedPreferences();
+		defaltPreference.edit().putBoolean(TEST_MODE, value).commit();
+	}
+	public static boolean setHostProperty(String key,String value){
+		if(Log.D)
+		{
+			Log.d("Configuration", "setHostProperty()-->"+key+value);
+		}
+		final SharedPreferences defaltPreference = CommonUtil.getJdSharedPreferences();
+		defaltPreference.edit().putString(key, value).commit();
+		properties.setProperty(key, value);
+		return true;
+	}
+	public static Integer getIntegerProperty(String key) {
+		return getIntegerProperty(key, null);
+	}
+	public static Properties getProperties(){
+		return properties;
+	}
+	
+	public static Integer getIntegerProperty(String key, Integer defaultValue) {
+		String value = getProperty(key);
+		if (null == value) {
+			return defaultValue;
+		}
+		try {
+			return Integer.valueOf(value);
+		} catch (Exception e) {
+			return defaultValue;
+		}
+
+	}
+	
+	public static Long getLongProperty(String key) {
+		return getLongProperty(key, null);
+	}
+
+	public static Long getLongProperty(String key, Long defaultValue) {
+		String value = getProperty(key);
+		if (null == value) {
+			return defaultValue;
+		}
+		try {
+			return Long.valueOf(value);
+		} catch (Exception e) {
+			return defaultValue;
+		}
+
+	}
+
+	public static Boolean getBooleanProperty(String key) {
+		return getBooleanProperty(key, null);
+	}
+
+	public static Boolean getBooleanProperty(String key, Boolean defaultValue) {
+		String value = getProperty(key);
+		if (null == value) {
+			return defaultValue;
+		}
+		try {
+			return Boolean.valueOf(value);
+		} catch (Exception e) {
+			return defaultValue;
+		}
+
+	}
+
+}

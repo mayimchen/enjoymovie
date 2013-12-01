@@ -1,0 +1,174 @@
+package com.jingdong.app.mall.secure;
+
+import com.jingdong.app.mall.utils.HttpGroup;
+import com.jingdong.app.mall.utils.JSONObjectProxy;
+import com.jingdong.app.mall.utils.Log;
+import com.jingdong.app.mall.utils.HttpGroup.HttpError;
+import com.jingdong.app.mall.utils.HttpGroup.HttpResponse;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSetting;
+import com.jingdong.app.mall.utils.HttpGroup.HttpSettingParams;
+
+public class SecureAPI {
+
+	private final static String TAG = "SecureAPI";
+
+	private static SecureAPI instance = new SecureAPI();
+	/**
+	 * @Fields httpGroup : 网络连接
+	 */
+	private HttpGroup httpGroup;
+
+	private static final int STATE_NONE = 1;// 原始状态
+	private static final int STATE_FAILED = 3;// 失败
+	private static final int STATE_SUCCEED = 2;// 成功
+	private static final int STATE_DOING = 0;// 进行中
+
+	/**
+	 * 当前加密通讯准备工作的状态
+	 */
+	private int mState = STATE_NONE;
+	/**
+	 * @Fields mJSONObjectModules : 所有机密解密的列表对应的JSON
+	 */
+	public JSONObjectProxy jsonApiInfos;
+	
+	/**
+	 * 即使等待，也检查API是否需要加密
+	 */
+	public static boolean checkApi(String functionId){
+		return instance.doCheckApi(functionId);
+	}
+
+	/**
+	 * 构造方法
+	 */
+	private SecureAPI() {
+		// 初始化 httpGroup
+		if (null == httpGroup) {
+			HttpGroup.HttpGroupSetting httpGroupSetting = new HttpGroup.HttpGroupSetting();
+			httpGroupSetting.setType(HttpGroup.HttpGroupSetting.TYPE_JSON);
+			httpGroup = new HttpGroup.HttpGroupaAsynPool(httpGroupSetting);
+		}
+	}
+
+	/**
+	 * 任何中途出错或者成功，只要结束了一定要调用此方法
+	 */
+	private synchronized void complete(int state) {
+		mState = state;
+		notifyAll();
+	}
+
+	/**
+	 * 强制获取api信息
+	 */
+	private synchronized JSONObjectProxy getApiInfos() {
+
+		boolean wait = true;// 默认为true
+
+		if (null != jsonApiInfos) {
+			return jsonApiInfos;
+		}
+
+		if (mState != STATE_DOING) {
+			// 把标志位改为进行中
+			mState = STATE_DOING;
+			loadModules();
+		}
+
+		if (wait) {
+			try {
+				if (Log.D) {
+					Log.d(TAG, "SecureAPI wait start -->> ");
+				}
+				wait();
+				if (Log.D) {
+					Log.d(TAG, "SecureAPI wait end -->> ");
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		return jsonApiInfos;
+	}
+
+	/**
+	 * 设置请求加密接口列表的参数
+	 */
+	private void loadModules() {
+		HttpSetting httpSetting = new HttpSetting();
+		httpSetting.setNeedGlobalInitialization(false);
+		httpSetting.setTopPriority(true);
+		httpSetting.setFunctionId("moduleEncrypt");
+		httpSetting.putJsonParam("version", "1");
+		httpSetting.setListener(modluesLoadListener);
+		httpGroup.add(httpSetting);
+	}
+
+	/**
+	 * 检查该api是否需要加密
+	 */
+	private boolean doCheckApi(String functionId) {
+		// 部分api写死不需要加密
+		if ("loginTalk".equals(functionId) || //
+				"msgUnReadIdList".equals(functionId) || //
+				"msgSummaryList".equals(functionId) || //
+				"activationMessage".equals(functionId) || //
+				"security".equals(functionId) || //
+				"registerDevice".equals(functionId) || //
+				"device".equals(functionId) || //
+				"serverConfig".equals(functionId) || //
+				"moduleEncrypt".equals(functionId)) {
+			return false;
+		}
+		// 去列表查询
+		boolean result = false;
+		JSONObjectProxy infos = getApiInfos();
+		if (null != infos) {
+			JSONObjectProxy jo = infos.getJSONObjectOrNull(functionId);
+			if (null != jo) {
+				String encrypt = jo.getStringOrNull("encrypt");
+				if (null != encrypt && "true".equals(encrypt)) {
+					result = true;
+				}
+			}
+		}
+		if (Log.D) {
+			Log.d(TAG, "SecureAPI checkApi() result -->> " + result);
+		}
+		return result;
+	}
+
+	/**
+	 * 加密api列表加载监听器
+	 */
+	HttpGroup.OnCommonListener modluesLoadListener = new HttpGroup.OnCommonListener() {
+
+		@Override
+		public void onReady(HttpSettingParams httpSettingParams) {
+
+		}
+
+		@Override
+		public void onError(HttpError error) {
+			complete(STATE_FAILED);
+		}
+
+		@Override
+		public void onEnd(HttpResponse httpResponse) {
+			JSONObjectProxy modulesJsonObject = httpResponse.getJSONObject();
+
+			String code = modulesJsonObject.getStringOrNull("code");
+
+			if (null != code && "0".equals(code)) {
+				jsonApiInfos = modulesJsonObject.getJSONObjectOrNull("modules");
+				if (null != jsonApiInfos) {
+					complete(STATE_SUCCEED);
+				}
+			}
+
+			complete(STATE_FAILED);
+		}
+	};
+
+}

@@ -1,0 +1,526 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical" >
+
+    <!-- 从时长这里入手加入时间 -->
+
+    <include
+        android:id="@+id/common_title"
+        layout="@layout/head" />
+
+    <RelativeLayout
+        android:id="@+id/vacation_detail_headLayout"
+        android:layout_width="fill_parent"
+        android:layout_height="65dp"
+        android:layout_below="@id/common_title"
+        android:background="@drawable/fixed_bg" >
+
+        <Button
+            android:id="@+id/create_vacation_order"
+            android:layout_width="100dp"
+            android:layout_height="wrap_content"
+            android:layout_alignParentRight="true"
+            android:layout_centerVertical="true"
+            android:layout_marginRight="10dp"
+            android:background="@drawable/red_submit_button"
+            android:text="预订"
+            android:textColor="#fff"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/vacation_name_tv"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:layout_centerVertical="true"
+            android:layout_toLeftOf="@id/create_vacation_order"
+            android:gravity="center"
+            android:lines="2"
+            android:padding="2dp" />
+    </RelativeLayout>
+
+    <ScrollView
+        android:id="@+id/vacation_scrollview"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/vacation_detail_headLayout"
+        android:fadeScrollbars="true" >
+
+        <RelativeLayout
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:padding="7dp"
+            android:paddingBottom="20dp" >
+
+            <RelativeLayout
+                android:id="@+id/vacation_picture_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/vacation_name_tv"
+                android:layout_marginBottom="10dp"
+                android:background="@drawable/background_corners_no_line" >
+
+                <LinearLayout
+                    android:id="@+id/guess_taste"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentTop="true"
+                    android:orientation="vertical" >
+
+                    <RelativeLayout
+                        android:id="@+id/product_list_item"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_centerHorizontal="true"
+                        android:layout_marginLeft="1dp"
+                        android:layout_marginRight="1dp"
+                        android:minHeight="104dp"
+                        android:paddingBottom="10dp"
+                        android:paddingTop="5dp" >
+
+                        <!-- 右箭头 -->
+
+                        <ImageView
+                            android:id="@+id/arrow_rightt"
+                            android:layout_width="13dp"
+                            android:layout_height="13dp"
+                            android:layout_alignParentRight="true"
+                            android:layout_centerVertical="true"
+                            android:layout_marginRight="1dp"
+                            android:clickable="true"
+                            android:src="@drawable/android_list_idex" >
+                        </ImageView>
+                        <!-- 左箭头 -->
+
+                        <ImageView
+                            android:id="@+id/arrow_left"
+                            android:layout_width="13dp"
+                            android:layout_height="13dp"
+                            android:layout_alignParentLeft="true"
+                            android:layout_centerVertical="true"
+                            android:layout_marginLeft="1dp"
+                            android:src="@drawable/android_list_idex_left" >
+                        </ImageView>
+
+                        <com.banking.xc.utils.ui.MyGallery
+                            android:id="@+id/vacation_picture_head_gallery"
+                            android:layout_width="fill_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_below="@id/guess_taste"
+                            android:layout_marginBottom="5dp"
+                            android:layout_marginLeft="2dp"
+                            android:layout_marginRight="2dp"
+                            android:layout_marginTop="5dp"
+                            android:layout_toLeftOf="@id/arrow_rightt"
+                            android:layout_toRightOf="@id/arrow_left"
+                            android:drawingCacheQuality="high"
+                            android:gravity="left"
+                            android:spacing="2dp"
+                            android:unselectedAlpha="1" />
+                    </RelativeLayout>
+
+                    <TextView
+                        android:id="@+id/vacation_picture_name_tv"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentTop="true"
+                        android:maxLines="2"
+                        android:minHeight="32dp"
+                        android:paddingLeft="10dp"
+                        android:paddingRight="10dp" />
+                </LinearLayout>
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/vacation_detail_baseLayout"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/vacation_picture_layout"
+                android:background="@drawable/background_corners_no_line" >
+
+                <RelativeLayout
+                    android:id="@+id/vacation_servicelong_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/vacation_picture_layout"
+                    android:paddingBottom="5dp"
+                    android:paddingLeft="8dp"
+                    android:paddingTop="5dp" >
+
+                    <!-- android:background="@drawable/circle_corners_bg" -->
+
+                    <TextView
+                        android:id="@+id/vacation_length_iv"
+                        android:layout_width="21dp"
+                        android:layout_height="21dp"
+                        android:layout_alignParentLeft="true"
+                        android:layout_marginLeft="5dp"
+                        android:background="@drawable/icon_date"
+                        android:padding="5dp"
+                        android:textSize="18sp" />
+
+                    <TextView
+                        android:id="@+id/vacation_startcity_tv"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignTop="@id/vacation_length_iv"
+                        android:layout_toRightOf="@id/vacation_length_iv"
+                        android:text=""
+                        android:textColor="@color/red"
+                        android:textSize="16sp" />
+                    <!-- 自北京， -->
+                    <!-- 出发日期写入 -->
+
+                    <TextView
+                        android:id="@+id/vacation_starttime_content"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_toRightOf="@id/vacation_startcity_tv"
+                        android:ellipsize="end"
+                        android:text=""
+                        android:textSize="16sp" />
+                    <!-- 于2013-12-03日出发 -->
+
+                    <TextView
+                        android:id="@+id/vacation_length_content"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignLeft="@id/vacation_startcity_tv"
+                        android:layout_below="@id/vacation_startcity_tv"
+                        android:text=""
+                        android:textSize="16sp" />
+                    <!-- 持续时间3天， -->
+
+                    <TextView
+                        android:id="@+id/vacation_returnDate_content"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/vacation_startcity_tv"
+                        android:layout_toRightOf="@id/vacation_length_content"
+                        android:text=""
+                        android:textSize="16sp" />
+                    <!-- 预计2013-04-14返回 -->
+
+
+                    <!-- 价格总是0 -->
+
+                    <LinearLayout
+                        android:id="@+id/priceplan_layout"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_alignLeft="@id/vacation_startcity_tv"
+                        android:layout_below="@id/vacation_length_content"
+                        android:layout_toRightOf="@id/vacation_length_iv"
+                        android:visibility="gone" >
+
+                        <TextView
+                            android:id="@+id/vacation_price_tv"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textSize="16sp" />
+                        <TextView
+                            android:id="@+id/vacation_price_detail_tv"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:layout_marginLeft="20dp"
+                            android:textSize="16sp" />
+                    </LinearLayout>
+                    <!-- 大约花费2500元. -->
+
+                    <LinearLayout
+                        android:id="@+id/warning_layout"
+                        android:layout_width="fill_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_below="@id/priceplan_layout"
+                        android:visibility="gone" >
+
+                        <TextView
+                            android:id="@+id/vacation_warning_iv"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_marginLeft="6dp"
+                            android:background="@drawable/warning_icon" />
+
+                        <TextView
+                            android:id="@+id/vacation_warning_content"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="3dp"
+                            android:padding="5dp" />
+                    </LinearLayout>
+                </RelativeLayout>
+
+                <View
+                    android:id="@+id/my_divide_line_1"
+                    style="@style/line1"
+                    android:layout_below="@id/vacation_servicelong_layout" >
+                </View>
+
+                <RelativeLayout
+                    android:id="@+id/vacation_promotion_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/my_divide_line_1"
+                    android:minHeight="43dp"
+                    android:paddingBottom="2dp"
+                    android:paddingLeft="13dp"
+                    android:paddingTop="2dp" >
+
+                    <!-- android:background="@drawable/more_acitivity_item_selector_top_corners" -->
+                    <!-- android:layout_height="43dp" -->
+
+                    <TextView
+                        android:id="@+id/vacation_promotion_tv"
+                        android:layout_width="21dp"
+                        android:layout_height="21dp"
+                        android:layout_alignParentLeft="true"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/icon_promotion"
+                        android:padding="5dp" />
+
+                    <TextView
+                        android:id="@+id/vacation_promotion_text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_toRightOf="@id/vacation_promotion_tv"
+                        android:ellipsize="end"
+                        android:maxLines="3"
+                        android:padding="5dp"
+                        android:text="" />
+                </RelativeLayout>
+
+                <View
+                    android:id="@+id/my_divide_line_2"
+                    style="@style/line1"
+                    android:layout_below="@id/vacation_promotion_layout" >
+                </View>
+
+                <RelativeLayout
+                    android:id="@+id/vacation_category_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="43dp"
+                    android:layout_below="@id/my_divide_line_2"
+                    android:clickable="true"
+                    android:paddingLeft="13dp"
+                    android:paddingTop="10dp" >
+
+                    <!-- android:background="@drawable/more_activity_item_selector_no_corners" -->
+
+                    <TextView
+                        android:id="@+id/vacation_category_image"
+                        android:layout_width="21dp"
+                        android:layout_height="21dp"
+                        android:layout_alignParentLeft="true"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/common_order_button"
+                        android:padding="5dp" >
+                    </TextView>
+
+                    <TextView
+                        android:id="@+id/vacation_category_tv"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_toRightOf="@id/vacation_category_image"
+                        android:paddingLeft="15dp"
+                        android:text="类型：" />
+
+                    <TextView
+                        android:id="@+id/vacation_category_content"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_centerVertical="true"
+                        android:layout_marginLeft="5dp"
+                        android:layout_toRightOf="@id/vacation_category_tv"
+                        android:ellipsize="end"
+                        android:singleLine="true"
+                        android:text="" />
+                </RelativeLayout>
+
+                <View
+                    android:id="@+id/my_divide_line_3"
+                    style="@style/line1"
+                    android:layout_below="@id/vacation_category_layout" >
+                </View>
+
+                <RelativeLayout
+                    android:id="@+id/vacation_desc_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/my_divide_line_3"
+                    android:paddingBottom="6dp"
+                    android:paddingLeft="13dp"
+                    android:paddingTop="6dp" >
+
+                    <!-- android:background="@drawable/more_activity_item_selector_bottom_corners" -->
+
+                    <TextView
+                        android:id="@+id/vacation_desc_iv"
+                        android:layout_width="21dp"
+                        android:layout_height="21dp"
+                        android:layout_alignParentLeft="true"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/icon_edit"
+                        android:padding="5dp" >
+                    </TextView>
+
+                    <TextView
+                        android:id="@+id/vacation_desc_content"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_toRightOf="@id/vacation_desc_iv"
+                        android:ellipsize="end"
+                        android:maxLines="3"
+                        android:padding="5dp"
+                        android:text="" />
+                </RelativeLayout>
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/vacation_segment_control_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="43dp"
+                android:paddingBottom="5dp"
+                android:layout_below="@id/vacation_detail_baseLayout"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/circle_corners_bg" >
+
+                <TextView
+                    android:id="@+id/vacation_segment_control_tv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginTop="8dp"
+                    android:text="详细行程：" />
+                <TextView
+                    android:id="@+id/vacation_segment_price_tv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="5dp"
+                    android:layout_toRightOf="@id/vacation_segment_control_tv"
+                    android:layout_alignTop="@id/vacation_segment_control_tv"
+                    android:text="(花费：￥0)" />
+                <TextView
+                    android:id="@+id/vacation_segment_control"
+                    android:layout_width="20dp"
+                    android:layout_height="15dp"
+                    android:layout_alignParentRight="true"
+                    android:layout_alignBottom="@id/vacation_segment_control_tv"
+                    android:layout_marginRight="10dp"
+                    android:background="@drawable/arrow_down" />
+                <RelativeLayout
+                    android:id="@+id/segment_package_layout"
+                    android:layout_width="fill_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@id/vacation_segment_control_tv"
+                    android:layout_marginTop="10dp"
+                    android:paddingLeft="10dp"
+                    android:visibility="gone"
+                    >
+                    <TextView
+                        android:id="@+id/package_name"
+                        android:layout_height="wrap_content"
+                        android:layout_width="230dp"
+                        />
+                    <TextView
+                        android:id="@+id/cancel_package"
+                        android:layout_height="wrap_content"
+                        android:layout_width="wrap_content"
+                        android:layout_alignParentRight="true"
+                        android:layout_marginLeft="10dp"
+                        android:textSize="15sp"
+                        />
+                </RelativeLayout>
+            </RelativeLayout>
+
+            <com.banking.xc.utils.ui.MyListView
+                android:id="@+id/vacation_segment_list"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/vacation_segment_control_layout"
+                android:layout_margin="3dp"
+                android:background="@drawable/circle_corners_bg"
+                android:visibility="gone" />
+
+            <RelativeLayout
+                android:id="@+id/vacation_priceplan_control_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="43dp"
+                android:layout_below="@id/vacation_segment_list"
+                android:layout_marginTop="15dp"
+                android:background="@drawable/circle_corners_bg"
+                android:visibility="gone" >
+
+                <TextView
+                    android:id="@+id/vacation_priceplan_control_tv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_marginLeft="10dp"
+                    android:text="低价推荐:" />
+
+                <ImageView
+                    android:id="@+id/vacation_priceplan_arrow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginRight="10dp"
+                    android:background="@drawable/android_list_idex" />
+            </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/vacation_bookknow_control_layout"
+                android:layout_width="fill_parent"
+                android:layout_height="43dp"
+                android:layout_below="@id/vacation_priceplan_control_layout"
+                android:layout_marginTop="15dp"
+                android:background="@drawable/circle_corners_bg" >
+
+                <TextView
+                    android:id="@+id/vacation_bookknow_control_tv"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_marginLeft="10dp"
+                    android:text="预订须知:" />
+
+                <TextView
+                    android:id="@+id/vacation_bookknow_control"
+                    android:layout_width="20dp"
+                    android:layout_height="15dp"
+                    android:layout_alignParentRight="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginRight="10dp"
+                    android:background="@drawable/arrow_down" />
+            </RelativeLayout>
+
+            <!-- com.banking.xc.utils.ui.MyListView -->
+
+            <com.banking.xc.utils.ui.MyListView
+                android:id="@+id/vacation_bookknow_list"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/vacation_bookknow_control_layout"
+                android:layout_margin="3dp"
+                android:background="@drawable/circle_corners_bg"
+                android:visibility="gone" >
+            </com.banking.xc.utils.ui.MyListView>
+
+            <!--
+                 <com.banking.xc.utils.ui.MyListView
+                android:id="@+id/vacation_priceplan_list"
+                android:layout_width="fill_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/vacation_priceplan_control_layout"
+                android:layout_margin="12dp"
+                android:visibility="gone" />
+            -->
+        </RelativeLayout>
+    </ScrollView>
+
+</RelativeLayout>

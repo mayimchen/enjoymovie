@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+
+    <!-- 订单状态 -->
+
+    <TextView
+        android:id="@+id/detail_order_status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="订单状态"
+        android:textColor="@color/black"
+        android:textSize="12dp" >
+    </TextView>
+
+    <!-- 订单状态内容 -->
+
+    <TextView
+        android:id="@+id/detail_order_status_comment"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/detail_order_status"
+        android:layout_toRightOf="@+id/detail_order_status"
+        android:textColor="@color/red"
+        android:textSize="14dp" >
+    </TextView>
+
+
+ <!-- 订单编号 -->
+
+        <TextView
+            android:id="@+id/detail_order_id_number"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/detail_order_status"
+            android:text="编号："
+            android:textColor="@color/black"
+            android:textSize="14dp" >
+        </TextView>
+
+        <!-- 订单编号内容 -->
+
+        <TextView
+            android:id="@+id/detail_order_id_number_comment"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/detail_order_status"
+            android:layout_toRightOf="@+id/detail_order_id_number"
+            android:textColor="@color/black"
+            android:textSize="12dp" >
+        </TextView>
+
+        <!-- 查看物流 -->
+
+        <Button
+            android:id="@+id/order_pay_button"
+            android:layout_width="wrap_content"
+            android:layout_height="33dp"
+            android:layout_alignParentRight="true"
+            android:background="@drawable/pay_order_button"
+            android:focusable="false"
+            android:textColor="@color/white"
+            android:visibility="invisible" />
+        <!-- android:background="@drawable/android_my_order_no_pay_button" -->
+    
+</RelativeLayout>
